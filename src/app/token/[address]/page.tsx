@@ -28,6 +28,7 @@ import { TradePanel } from "@/components/bonding/TradePanel";
 import { CurveStats } from "@/components/bonding/CurveStats";
 import { CurveProgress } from "@/components/bonding/CurveProgress";
 import { TokenComments } from "@/components/bonding/TokenComments";
+import { TokenTradeFeed } from "@/components/bonding/TokenTradeFeed";
 import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
@@ -435,6 +436,13 @@ export default function TokenDetailPage() {
                 curveState={curveState}
                 poolReserves={poolReserves}
                 loading={false}
+              />
+
+              <TokenTradeFeed
+                curveAddress={launch.curveAddress}
+                tokenSymbol={launch.symbol}
+                graduated={graduated}
+                poolAddress={curveState?.pool}
               />
 
               <TokenComments tokenAddress={launch.curveAddress} />
