@@ -1,0 +1,208 @@
+[
+  {
+    "type": "function",
+    "name": "getBeneficiaries",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPosition",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct VestingPosition",
+        "components": [
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "released",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "cliffEnd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "vestingEnd",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "startTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "token_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "schedules",
+        "type": "tuple[]",
+        "internalType": "struct VestingSchedule[]",
+        "components": [
+          {
+            "name": "beneficiary",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "cliffDuration",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "vestingDuration",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "startTime",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "releasable",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "release",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "token",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "vested",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "TokensReleased",
+    "inputs": [
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AlreadyInitialized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientVestedAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidVestingSchedule",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToRelease",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  }
+]

@@ -1,0 +1,16 @@
+[
+  "function graduated() view returns (bool)",
+  "function pool() view returns (address)",
+  "function currentPrice() view returns (uint256)",
+  "function progress() view returns (uint256)",
+  "function realQuaiReserves() view returns (uint256)",
+  "function realTokenReserves() view returns (uint256)",
+  "function virtualQuaiReserves() view returns (uint256)",
+  "function virtualTokenReserves() view returns (uint256)",
+  "function getBuyQuote(uint256 quaiAmount) view returns (uint256)",
+  "function getSellQuote(uint256 tokenAmount) view returns (uint256)",
+  "function buy(uint256 minTokensOut) payable",
+  "function sell(uint256 tokenAmount, uint256 minQuaiOut)",
+  "event TokensPurchased(address indexed buyer, uint256 quaiAmount, uint256 tokenAmount, uint256 fee)",
+  "event TokensSold(address indexed seller, uint256 tokenAmount, uint256 quaiAmount, uint256 fee)"
+]

@@ -1,0 +1,6 @@
+[
+  "function reserveQuai() view returns (uint256)",
+  "function reserveToken() view returns (uint256)",
+  "function token() view returns (address)",
+  "function getAmountOut(uint256 amountIn, bool quaiIn) view returns (uint256)"
+]

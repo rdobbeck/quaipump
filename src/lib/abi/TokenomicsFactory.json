@@ -1,0 +1,444 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "tokenImpl",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "vestingImpl",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "lockerImpl",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createToken",
+    "inputs": [
+      {
+        "name": "params",
+        "type": "tuple",
+        "internalType": "struct CreateTokenParams",
+        "components": [
+          {
+            "name": "tokenConfig",
+            "type": "tuple",
+            "internalType": "struct TokenConfig",
+            "components": [
+              {
+                "name": "name",
+                "type": "string",
+                "internalType": "string"
+              },
+              {
+                "name": "symbol",
+                "type": "string",
+                "internalType": "string"
+              },
+              {
+                "name": "decimals",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "supplyType",
+                "type": "uint8",
+                "internalType": "enum SupplyType"
+              },
+              {
+                "name": "initialSupply",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "hardCap",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "burnOnTransfer",
+                "type": "bool",
+                "internalType": "bool"
+              },
+              {
+                "name": "burnOnTransferBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              }
+            ]
+          },
+          {
+            "name": "taxConfig",
+            "type": "tuple",
+            "internalType": "struct TaxConfig",
+            "components": [
+              {
+                "name": "buyTaxBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "sellTaxBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "treasuryShareBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "autoLpShareBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "burnShareBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "reflectionShareBps",
+                "type": "uint16",
+                "internalType": "uint16"
+              }
+            ]
+          },
+          {
+            "name": "limitConfig",
+            "type": "tuple",
+            "internalType": "struct LimitConfig",
+            "components": [
+              {
+                "name": "maxWalletAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "maxTxAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "allocations",
+            "type": "tuple[]",
+            "internalType": "struct Allocation[]",
+            "components": [
+              {
+                "name": "recipient",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "bps",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "vested",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "vestingSchedules",
+            "type": "tuple[]",
+            "internalType": "struct VestingSchedule[]",
+            "components": [
+              {
+                "name": "beneficiary",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "totalAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "cliffDuration",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "vestingDuration",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "startTime",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          },
+          {
+            "name": "dexRouter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "lpLockDuration",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "treasuryWallet",
+            "type": "address",
+            "internalType": "address"
+          }
+        ]
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "vestingVault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "liquidityLocker",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getDeployment",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct TokenDeployment",
+        "components": [
+          {
+            "name": "token",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "vestingVault",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "liquidityLocker",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getDeploymentCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lockerImplementation",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "predictTokenAddress",
+    "inputs": [
+      {
+        "name": "deployer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "tokenImplementation",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "vestingImplementation",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "TokenCreated",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "vestingVault",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidityLocker",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "symbol",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AllocationSumInvalid",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBurnBps",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDecimals",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTaxBps",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidVestingSchedule",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SupplyExceedsHardCap",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TaxShareSumInvalid",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroSupply",
+    "inputs": []
+  }
+]
