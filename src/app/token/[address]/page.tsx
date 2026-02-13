@@ -13,6 +13,7 @@ import {
   Text,
   Link,
   Skeleton,
+  useToast,
 } from "@chakra-ui/react";
 import {
   useBondingCurve,
@@ -36,6 +37,7 @@ export default function TokenDetailPage() {
   const params = useParams<{ address: string }>();
   const address = params.address;
 
+  const toast = useToast();
   const { getAllLaunches, getCurveState } = useBondingCurve();
 
   const [launch, setLaunch] = useState<LaunchInfo | null>(null);
@@ -446,6 +448,45 @@ export default function TokenDetailPage() {
                 _hover={{ color: "var(--accent)" }}
               >
                 Explorer
+              </Link>
+              <Box
+                as="button"
+                fontSize="10px"
+                color="var(--text-secondary)"
+                bg="var(--bg-elevated)"
+                px={2}
+                py={1}
+                rounded="md"
+                cursor="pointer"
+                _hover={{ color: "var(--accent)" }}
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({
+                    title: "Link copied",
+                    status: "success",
+                    duration: 2000,
+                    position: "bottom-right",
+                  });
+                }}
+              >
+                Copy Link
+              </Box>
+              <Link
+                href={`https://x.com/intent/tweet?text=${encodeURIComponent(
+                  `Check out $${launch.symbol} on QuaiPump!`
+                )}&url=${encodeURIComponent(
+                  typeof window !== "undefined" ? window.location.href : ""
+                )}`}
+                isExternal
+                fontSize="10px"
+                color="var(--text-secondary)"
+                bg="var(--bg-elevated)"
+                px={2}
+                py={1}
+                rounded="md"
+                _hover={{ color: "var(--accent)", textDecoration: "none" }}
+              >
+                Share
               </Link>
             </HStack>
           </Flex>
