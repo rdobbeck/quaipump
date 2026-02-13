@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Container,
   VStack,
@@ -8,7 +8,9 @@ import {
   Flex,
   Text,
   Link,
+  Input,
   Skeleton,
+  Button,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
 import {
@@ -35,6 +37,8 @@ export default function PortfolioPage() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalValue, setTotalValue] = useState(0);
+  const [sortBy, setSortBy] = useState<"value" | "balance" | "name">("value");
+  const [search, setSearch] = useState("");
 
   const fetchPortfolio = useCallback(async () => {
     if (!account) {
@@ -132,6 +136,22 @@ export default function PortfolioPage() {
     fetchPortfolio();
   }, [fetchPortfolio]);
 
+  const filteredHoldings = useMemo(() => {
+    let list = [...holdings];
+    const q = search.toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        (h) =>
+          h.launch.name.toLowerCase().includes(q) ||
+          h.launch.symbol.toLowerCase().includes(q)
+      );
+    }
+    if (sortBy === "value") list.sort((a, b) => b.valueUsd - a.valueUsd);
+    else if (sortBy === "balance") list.sort((a, b) => b.balance - a.balance);
+    else if (sortBy === "name") list.sort((a, b) => a.launch.name.localeCompare(b.launch.name));
+    return list;
+  }, [holdings, search, sortBy]);
+
   const formatBalance = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
@@ -168,28 +188,71 @@ export default function PortfolioPage() {
             Portfolio
           </Text>
           {!loading && holdings.length > 0 && (
-            <Box
-              bg="var(--bg-surface)"
-              border="1px solid"
-              borderColor="var(--border)"
-              rounded="lg"
-              px={4}
-              py={2}
-            >
-              <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
-                Total Value
-              </Text>
-              <Text
-                fontSize="md"
-                fontWeight="700"
-                fontFamily="mono"
-                color="var(--accent)"
+            <Flex align="center" gap={3}>
+              <Box
+                bg="var(--bg-surface)"
+                border="1px solid"
+                borderColor="var(--border)"
+                rounded="lg"
+                px={4}
+                py={2}
               >
-                ${totalValue.toFixed(2)}
-              </Text>
-            </Box>
+                <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
+                  Total Value
+                </Text>
+                <Text
+                  fontSize="md"
+                  fontWeight="700"
+                  fontFamily="mono"
+                  color="var(--accent)"
+                >
+                  ${totalValue.toFixed(2)}
+                </Text>
+              </Box>
+            </Flex>
           )}
         </Flex>
+
+        {/* Sort & Search controls */}
+        {!loading && holdings.length > 0 && (
+          <Flex gap={3} align="center" flexWrap="wrap">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search holdings..."
+              size="sm"
+              maxW="220px"
+              bg="var(--bg-elevated)"
+              border="1px solid"
+              borderColor="var(--border)"
+              color="var(--text-primary)"
+              fontSize="xs"
+              rounded="lg"
+              _hover={{ borderColor: "var(--border-hover)" }}
+              _focus={{ borderColor: "var(--accent)", boxShadow: "none" }}
+              _placeholder={{ color: "var(--text-tertiary)" }}
+            />
+            <Flex gap={1}>
+              {(["value", "balance", "name"] as const).map((s) => (
+                <Button
+                  key={s}
+                  size="xs"
+                  px={3}
+                  fontSize="10px"
+                  textTransform="capitalize"
+                  bg={sortBy === s ? "var(--accent)" : "var(--bg-elevated)"}
+                  color={sortBy === s ? "#0b0b0f" : "var(--text-secondary)"}
+                  border="1px solid"
+                  borderColor={sortBy === s ? "var(--accent)" : "var(--border)"}
+                  _hover={{ borderColor: "var(--accent)" }}
+                  onClick={() => setSortBy(s)}
+                >
+                  {s}
+                </Button>
+              ))}
+            </Flex>
+          </Flex>
+        )}
 
         {loading ? (
           <VStack spacing={2} align="stretch">
@@ -203,7 +266,7 @@ export default function PortfolioPage() {
               />
             ))}
           </VStack>
-        ) : holdings.length === 0 ? (
+        ) : filteredHoldings.length === 0 ? (
           <Flex
             h="200px"
             align="center"
@@ -243,7 +306,7 @@ export default function PortfolioPage() {
             </Flex>
 
             {/* Rows */}
-            {holdings.map((h) => (
+            {filteredHoldings.map((h) => (
               <Link
                 key={h.launch.curveAddress}
                 as={NextLink}

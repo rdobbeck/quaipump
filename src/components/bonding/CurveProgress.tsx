@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Flex, Text } from "@chakra-ui/react";
+import { QUAI_USD_PRICE } from "@/lib/constants";
 import type { CurveState } from "@/hooks/useBondingCurve";
 
 interface CurveProgressProps {
@@ -67,10 +68,45 @@ export function CurveProgress({ curveState, loading }: CurveProgressProps) {
         )}
       </Box>
 
-      {!graduated && curveState && (
-        <Text fontSize="10px" color="var(--text-tertiary)" mt={2}>
-          When the bonding curve reaches 100%, liquidity is deployed to the DEX and trading continues there.
-        </Text>
+      {!graduated && curveState && pct > 0 && (
+        <Box mt={3}>
+          {(() => {
+            const currentQuai = parseFloat(curveState.realQuaiReserves);
+            const estimatedTotal = pct > 0 ? currentQuai / (pct / 100) : 0;
+            const remaining = Math.max(0, estimatedTotal - currentQuai);
+            const remainingUsd = remaining * QUAI_USD_PRICE;
+            return (
+              <Flex
+                justify="space-between"
+                align="center"
+                bg="var(--bg-elevated)"
+                rounded="lg"
+                px={3}
+                py={2}
+              >
+                <Text fontSize="10px" color="var(--text-tertiary)">
+                  Est. QUAI to graduate
+                </Text>
+                <Flex gap={2} align="center">
+                  <Text
+                    fontSize="xs"
+                    fontWeight="600"
+                    fontFamily="mono"
+                    color="var(--accent)"
+                  >
+                    {remaining < 1 ? remaining.toFixed(4) : remaining.toFixed(2)} QUAI
+                  </Text>
+                  <Text fontSize="10px" color="var(--text-tertiary)" fontFamily="mono">
+                    (~${remainingUsd.toFixed(2)})
+                  </Text>
+                </Flex>
+              </Flex>
+            );
+          })()}
+          <Text fontSize="10px" color="var(--text-tertiary)" mt={2}>
+            When the bonding curve reaches 100%, liquidity is deployed to the DEX.
+          </Text>
+        </Box>
       )}
     </Box>
   );

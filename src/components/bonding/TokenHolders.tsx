@@ -164,7 +164,7 @@ export function TokenHolders({
             <Text flex="0 0 30px">#</Text>
             <Text flex={1}>Address</Text>
             <Text flex="0 0 100px" textAlign="right">{tokenSymbol}</Text>
-            <Text flex="0 0 60px" textAlign="right">%</Text>
+            <Text flex="0 0 60px" textAlign="right" display={{ base: "none", sm: "block" }}>%</Text>
           </Flex>
 
           <VStack spacing={0} align="stretch">
@@ -211,7 +211,7 @@ export function TokenHolders({
                   {formatBalance(holder.balance)}
                 </Text>
 
-                <Flex flex="0 0 60px" justify="flex-end" align="center" gap={1.5}>
+                <Flex flex="0 0 60px" justify="flex-end" align="center" gap={1.5} display={{ base: "none", sm: "flex" }}>
                   <Text
                     fontFamily="mono"
                     fontSize="11px"

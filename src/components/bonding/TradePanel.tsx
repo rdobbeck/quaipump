@@ -7,6 +7,7 @@ import { useAppState } from "@/app/store";
 import { NETWORK, QUAI_USD_PRICE } from "@/lib/constants";
 import GraduatedPoolABI from "@/lib/abi/GraduatedPool.json";
 import BondingCurveTokenABI from "@/lib/abi/BondingCurveToken.json";
+import { playSuccess, playError } from "@/lib/sounds";
 
 interface TradePanelProps {
   curveAddress: string;
@@ -133,6 +134,7 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      playSuccess();
       toast({
         title: "Buy successful",
         description: `Bought ${tokenSymbol} for ${buyAmount} QUAI`,
@@ -144,6 +146,7 @@ export function TradePanel({
     } catch (err) {
       console.error("Buy failed:", err);
       setChunkProgress(null);
+      playError();
       toast({
         title: "Buy failed",
         description: err instanceof Error ? err.message : "Transaction rejected or failed",
@@ -174,6 +177,7 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      playSuccess();
       toast({
         title: "Sell successful",
         description: `Sold ${parseFloat(sellAmount).toLocaleString()} ${tokenSymbol}`,
@@ -184,6 +188,7 @@ export function TradePanel({
       });
     } catch (err) {
       console.error("Sell failed:", err);
+      playError();
       toast({
         title: "Sell failed",
         description: err instanceof Error ? err.message : "Transaction rejected or failed",
@@ -228,6 +233,7 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      playSuccess();
       toast({
         title: "Buy successful",
         description: `Bought ${tokenSymbol} for ${buyAmount} QUAI (pool)`,
@@ -238,6 +244,7 @@ export function TradePanel({
       });
     } catch (err) {
       console.error("Pool buy failed:", err);
+      playError();
       toast({
         title: "Buy failed",
         description: err instanceof Error ? err.message : "Transaction rejected or failed",
@@ -295,6 +302,7 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      playSuccess();
       toast({
         title: "Sell successful",
         description: `Sold ${parseFloat(sellAmount).toLocaleString()} ${tokenSymbol} (pool)`,
@@ -306,6 +314,7 @@ export function TradePanel({
     } catch (err) {
       console.error("Pool sell failed:", err);
       setApproving(false);
+      playError();
       toast({
         title: "Sell failed",
         description: err instanceof Error ? err.message : "Transaction rejected or failed",

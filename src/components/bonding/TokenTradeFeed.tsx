@@ -183,8 +183,8 @@ export function TokenTradeFeed({
             <Text flex="0 0 50px">Type</Text>
             <Text flex={1}>Trader</Text>
             <Text flex="0 0 90px" textAlign="right">QUAI</Text>
-            <Text flex="0 0 100px" textAlign="right">{tokenSymbol}</Text>
-            <Text flex="0 0 70px" textAlign="right">USD</Text>
+            <Text flex="0 0 100px" textAlign="right" display={{ base: "none", md: "block" }}>{tokenSymbol}</Text>
+            <Text flex="0 0 70px" textAlign="right" display={{ base: "none", sm: "block" }}>USD</Text>
           </Flex>
 
           <VStack spacing={0} align="stretch">
@@ -251,6 +251,7 @@ export function TokenTradeFeed({
                   fontFamily="mono"
                   fontSize="11px"
                   color="var(--text-secondary)"
+                  display={{ base: "none", md: "block" }}
                 >
                   {formatAmount(trade.tokenAmount)}
                 </Text>
@@ -262,6 +263,7 @@ export function TokenTradeFeed({
                   fontFamily="mono"
                   fontSize="11px"
                   color="var(--text-tertiary)"
+                  display={{ base: "none", sm: "block" }}
                 >
                   ${(trade.quaiAmount * QUAI_USD_PRICE).toFixed(3)}
                 </Text>

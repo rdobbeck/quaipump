@@ -33,6 +33,7 @@ import { TokenComments } from "@/components/bonding/TokenComments";
 import { TokenTradeFeed } from "@/components/bonding/TokenTradeFeed";
 import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
 import { TokenHolders } from "@/components/bonding/TokenHolders";
+import { useFavorites } from "@/hooks/useFavorites";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
 export default function TokenDetailPage() {
@@ -40,6 +41,7 @@ export default function TokenDetailPage() {
   const address = params.address;
 
   const toast = useToast();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { getAllLaunches, getCurveState } = useBondingCurve();
 
   const [launch, setLaunch] = useState<LaunchInfo | null>(null);
@@ -254,16 +256,16 @@ export default function TokenDetailPage() {
       : null;
 
   return (
-    <Container maxW="container.xl" py={6}>
-      <VStack spacing={4} align="stretch">
+    <Container maxW="container.xl" py={{ base: 3, md: 6 }} px={{ base: 3, md: 4 }}>
+      <VStack spacing={{ base: 3, md: 4 }} align="stretch">
         {/* Header */}
         <Box
           bg="var(--bg-surface)"
           border="1px solid"
           borderColor="var(--border)"
           rounded="xl"
-          px={5}
-          py={4}
+          px={{ base: 3, md: 5 }}
+          py={{ base: 3, md: 4 }}
         >
           <Flex
             justify="space-between"
@@ -319,14 +321,26 @@ export default function TokenDetailPage() {
                 </Flex>
               )}
               <Box>
-                <HStack spacing={2}>
+                <Flex gap={2} flexWrap="wrap" align="center">
                   <Text
-                    fontSize="lg"
+                    fontSize={{ base: "md", md: "lg" }}
                     fontWeight="700"
                     color="var(--text-primary)"
                   >
                     {launch.name}
                   </Text>
+                  <Box
+                    as="button"
+                    cursor="pointer"
+                    fontSize="lg"
+                    color={isFavorite(launch.curveAddress) ? "#ffd700" : "var(--text-tertiary)"}
+                    _hover={{ color: "#ffd700" }}
+                    transition="color 0.15s"
+                    onClick={() => toggleFavorite(launch.curveAddress)}
+                    lineHeight={1}
+                  >
+                    {isFavorite(launch.curveAddress) ? "\u2605" : "\u2606"}
+                  </Box>
                   <Box
                     bg={
                       graduated
@@ -368,8 +382,8 @@ export default function TokenDetailPage() {
                       STAKED
                     </Box>
                   )}
-                </HStack>
-                <HStack spacing={3} mt={1}>
+                </Flex>
+                <Flex gap={3} mt={1} flexWrap="wrap" align="center">
                   <Text fontSize="sm" fontWeight="600" fontFamily="mono" color="var(--accent)">
                     ${priceUsd > 0 ? priceUsd.toExponential(2) : "0.00"}
                   </Text>
@@ -390,12 +404,12 @@ export default function TokenDetailPage() {
                   <Text fontSize="xs" color="var(--text-tertiary)">
                     {timeAgo(launch.createdAt)}
                   </Text>
-                </HStack>
+                </Flex>
               </Box>
             </HStack>
 
             {/* Right: creator + links */}
-            <HStack spacing={3}>
+            <Flex gap={2} flexWrap="wrap">
               <HStack spacing={1}>
                 <Text fontSize="10px" color="var(--text-tertiary)">
                   by
@@ -511,7 +525,7 @@ export default function TokenDetailPage() {
               >
                 Share
               </Link>
-            </HStack>
+            </Flex>
           </Flex>
 
           {/* Description */}
