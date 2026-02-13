@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Box, Flex, Text, Input, Button } from "@chakra-ui/react";
+import { Box, Flex, Text, Input, Button, useToast } from "@chakra-ui/react";
 import { useBondingCurve } from "@/hooks/useBondingCurve";
 import { useAppState } from "@/app/store";
 import { NETWORK, QUAI_USD_PRICE } from "@/lib/constants";
@@ -29,6 +29,7 @@ export function TradePanel({
   poolAddress,
   onTrade,
 }: TradePanelProps) {
+  const toast = useToast();
   const { account, web3Provider } = useAppState();
   const {
     buyTokensChunked,
@@ -112,12 +113,13 @@ export function TradePanel({
   // Bonding curve buy (with chunking)
   const handleBuy = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
+    const buyAmount = amount;
     try {
       const slippageFraction = slippage / 100;
       setChunkProgress(null);
       await buyTokensChunked(
         curveAddress,
-        amount,
+        buyAmount,
         slippageFraction,
         (current, total) => {
           setChunkProgress({ current, total });
@@ -131,23 +133,40 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      toast({
+        title: "Buy successful",
+        description: `Bought ${tokenSymbol} for ${buyAmount} QUAI`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } catch (err) {
       console.error("Buy failed:", err);
       setChunkProgress(null);
+      toast({
+        title: "Buy failed",
+        description: err instanceof Error ? err.message : "Transaction rejected or failed",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     }
   }, [
-    amount, slippage, curveAddress, tokenAddress, account,
-    buyTokensChunked, getTokenBalance, onTrade,
+    amount, slippage, curveAddress, tokenAddress, tokenSymbol, account,
+    buyTokensChunked, getTokenBalance, onTrade, toast,
   ]);
 
   // Bonding curve sell
   const handleSell = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
+    const sellAmount = amount;
     try {
       const minQuaiOut = quote
         ? (parseFloat(quote) * (1 - slippage / 100)).toString()
         : "0";
-      await sellTokens(curveAddress, amount, minQuaiOut);
+      await sellTokens(curveAddress, sellAmount, minQuaiOut);
       setAmount("");
       setQuote("");
       if (account) {
@@ -155,17 +174,34 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      toast({
+        title: "Sell successful",
+        description: `Sold ${parseFloat(sellAmount).toLocaleString()} ${tokenSymbol}`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } catch (err) {
       console.error("Sell failed:", err);
+      toast({
+        title: "Sell failed",
+        description: err instanceof Error ? err.message : "Transaction rejected or failed",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     }
   }, [
-    amount, quote, slippage, curveAddress, tokenAddress, account,
-    sellTokens, getTokenBalance, onTrade,
+    amount, quote, slippage, curveAddress, tokenAddress, tokenSymbol, account,
+    sellTokens, getTokenBalance, onTrade, toast,
   ]);
 
   // Pool buy (swapQuaiForTokens)
   const handlePoolBuy = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0 || !poolAddress || !web3Provider) return;
+    const buyAmount = amount;
     setPoolSwapping(true);
     try {
       const quais = await import("quais");
@@ -173,7 +209,7 @@ export function TradePanel({
       const signer = await provider.getSigner();
       const pool = new quais.Contract(poolAddress, GraduatedPoolABI, signer);
 
-      const quaiAmount = quais.parseQuai(amount);
+      const quaiAmount = quais.parseQuai(buyAmount);
 
       // Get quote for min out
       const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
@@ -192,25 +228,42 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      toast({
+        title: "Buy successful",
+        description: `Bought ${tokenSymbol} for ${buyAmount} QUAI (pool)`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } catch (err) {
       console.error("Pool buy failed:", err);
+      toast({
+        title: "Buy failed",
+        description: err instanceof Error ? err.message : "Transaction rejected or failed",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } finally {
       setPoolSwapping(false);
     }
   }, [
-    amount, slippage, poolAddress, web3Provider, tokenAddress, account,
-    getTokenBalance, onTrade,
+    amount, slippage, poolAddress, web3Provider, tokenAddress, tokenSymbol, account,
+    getTokenBalance, onTrade, toast,
   ]);
 
   // Pool sell (approve + swapTokensForQuai)
   const handlePoolSell = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0 || !poolAddress || !web3Provider) return;
+    const sellAmount = amount;
     setPoolSwapping(true);
     try {
       const quais = await import("quais");
       const provider = web3Provider as InstanceType<typeof quais.BrowserProvider>;
       const signer = await provider.getSigner();
-      const tokenAmount = quais.parseUnits(amount, 18);
+      const tokenAmount = quais.parseUnits(sellAmount, 18);
 
       // Check allowance and approve if needed
       const tokenContract = new quais.Contract(tokenAddress, BondingCurveTokenABI, signer);
@@ -242,15 +295,31 @@ export function TradePanel({
         setBalance(bal);
       }
       onTrade?.();
+      toast({
+        title: "Sell successful",
+        description: `Sold ${parseFloat(sellAmount).toLocaleString()} ${tokenSymbol} (pool)`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } catch (err) {
       console.error("Pool sell failed:", err);
       setApproving(false);
+      toast({
+        title: "Sell failed",
+        description: err instanceof Error ? err.message : "Transaction rejected or failed",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-right",
+      });
     } finally {
       setPoolSwapping(false);
     }
   }, [
-    amount, slippage, poolAddress, web3Provider, tokenAddress, account,
-    getTokenBalance, onTrade,
+    amount, slippage, poolAddress, web3Provider, tokenAddress, tokenSymbol, account,
+    getTokenBalance, onTrade, toast,
   ]);
 
   const handleSellPercent = (pct: number) => {
