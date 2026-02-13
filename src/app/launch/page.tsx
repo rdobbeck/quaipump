@@ -22,6 +22,7 @@ import {
   type TokenomicsFormData,
 } from "@/components/bonding/TokenomicsToggle";
 import { BONDING_FACTORY_V2_ADDRESS } from "@/lib/constants";
+import { ImageUpload } from "@/components/launch/ImageUpload";
 
 const TOTAL_SUPPLY = 1_000_000_000;
 
@@ -245,33 +246,8 @@ export default function LaunchPage() {
             />
           </Box>
 
-          {/* Image URL */}
-          <Box>
-            <Text
-              fontSize="10px"
-              color="var(--text-tertiary)"
-              textTransform="uppercase"
-              mb={1}
-            >
-              Image URL
-            </Text>
-            <Input
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-              bg="var(--bg-elevated)"
-              border="1px solid"
-              borderColor="var(--border)"
-              color="var(--text-primary)"
-              fontSize="sm"
-              _hover={{ borderColor: "var(--border-hover)" }}
-              _focus={{
-                borderColor: "var(--accent)",
-                boxShadow: "none",
-              }}
-              _placeholder={{ color: "var(--text-tertiary)" }}
-            />
-          </Box>
+          {/* Image Upload */}
+          <ImageUpload value={imageUrl} onChange={setImageUrl} />
 
           {/* Social Links */}
           <Flex gap={3}>
