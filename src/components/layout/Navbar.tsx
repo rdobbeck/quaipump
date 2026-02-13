@@ -21,6 +21,7 @@ const BASE_NAV_LINKS = [
   { label: "Browse", href: "/" },
   { label: "Launch", href: "/launch" },
   { label: "Create", href: "/create" },
+  { label: "Portfolio", href: "/portfolio" },
 ];
 
 export function Navbar() {

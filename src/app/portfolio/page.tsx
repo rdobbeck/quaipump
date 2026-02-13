@@ -1,0 +1,387 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import {
+  Container,
+  VStack,
+  Box,
+  Flex,
+  Text,
+  Link,
+  Skeleton,
+} from "@chakra-ui/react";
+import NextLink from "next/link";
+import {
+  useBondingCurve,
+  type LaunchInfo,
+  type CurveState,
+} from "@/hooks/useBondingCurve";
+import { useAppState } from "@/app/store";
+import { NETWORK, QUAI_USD_PRICE, BONDING_TOTAL_SUPPLY } from "@/lib/constants";
+import GraduatedPoolABI from "@/lib/abi/GraduatedPool.json";
+
+interface Holding {
+  launch: LaunchInfo;
+  balance: number;
+  priceUsd: number;
+  valueUsd: number;
+  graduated: boolean;
+}
+
+export default function PortfolioPage() {
+  const { account } = useAppState();
+  const { getAllLaunches, getCurveState, getTokenBalance } = useBondingCurve();
+
+  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalValue, setTotalValue] = useState(0);
+
+  const fetchPortfolio = useCallback(async () => {
+    if (!account) {
+      setHoldings([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const launches = await getAllLaunches();
+
+      // Fetch all balances in parallel
+      const balanceResults = await Promise.allSettled(
+        launches.map((l) => getTokenBalance(l.tokenAddress, account))
+      );
+
+      // Filter to tokens with non-zero balance
+      const heldLaunches: { launch: LaunchInfo; balance: number }[] = [];
+      balanceResults.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          const bal = parseFloat(result.value);
+          if (bal > 0.001) {
+            heldLaunches.push({ launch: launches[i], balance: bal });
+          }
+        }
+      });
+
+      if (heldLaunches.length === 0) {
+        setHoldings([]);
+        setTotalValue(0);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch curve states + prices in parallel
+      const stateResults = await Promise.allSettled(
+        heldLaunches.map((h) => getCurveState(h.launch.curveAddress))
+      );
+
+      const holdingsList: Holding[] = [];
+      let total = 0;
+
+      for (let i = 0; i < heldLaunches.length; i++) {
+        const { launch, balance } = heldLaunches[i];
+        const stateResult = stateResults[i];
+        let priceQuai = 0;
+        let graduated = false;
+
+        if (stateResult.status === "fulfilled") {
+          const state: CurveState = stateResult.value;
+          graduated = state.graduated;
+
+          if (state.graduated && state.pool) {
+            try {
+              const quais = await import("quais");
+              const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+              const pool = new quais.Contract(state.pool, GraduatedPoolABI, provider);
+              const [rQuai, rToken] = await Promise.all([
+                pool.reserveQuai(),
+                pool.reserveToken(),
+              ]);
+              const reserveQuai = parseFloat(quais.formatQuai(rQuai));
+              const reserveToken = parseFloat(quais.formatUnits(rToken, 18));
+              if (reserveToken > 0) {
+                priceQuai = reserveQuai / reserveToken;
+              }
+            } catch {
+              priceQuai = parseFloat(state.currentPrice);
+            }
+          } else {
+            priceQuai = parseFloat(state.currentPrice);
+          }
+        }
+
+        const priceUsd = priceQuai * QUAI_USD_PRICE;
+        const valueUsd = priceUsd * balance;
+        total += valueUsd;
+
+        holdingsList.push({ launch, balance, priceUsd, valueUsd, graduated });
+      }
+
+      // Sort by value descending
+      holdingsList.sort((a, b) => b.valueUsd - a.valueUsd);
+      setHoldings(holdingsList);
+      setTotalValue(total);
+    } catch {
+      // Portfolio fetch failed
+    } finally {
+      setLoading(false);
+    }
+  }, [account, getAllLaunches, getCurveState, getTokenBalance]);
+
+  useEffect(() => {
+    fetchPortfolio();
+  }, [fetchPortfolio]);
+
+  const formatBalance = (n: number): string => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
+    if (n < 1) return n.toFixed(4);
+    return n.toFixed(2);
+  };
+
+  if (!account) {
+    return (
+      <Container maxW="container.xl" py={8}>
+        <Flex
+          h="300px"
+          align="center"
+          justify="center"
+          bg="var(--bg-surface)"
+          border="1px solid"
+          borderColor="var(--border)"
+          rounded="xl"
+        >
+          <Text color="var(--text-tertiary)" fontSize="sm">
+            Connect your wallet to view your portfolio
+          </Text>
+        </Flex>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxW="container.xl" py={6}>
+      <VStack spacing={4} align="stretch">
+        {/* Header */}
+        <Flex justify="space-between" align="center">
+          <Text fontSize="lg" fontWeight="700" color="var(--text-primary)">
+            Portfolio
+          </Text>
+          {!loading && holdings.length > 0 && (
+            <Box
+              bg="var(--bg-surface)"
+              border="1px solid"
+              borderColor="var(--border)"
+              rounded="lg"
+              px={4}
+              py={2}
+            >
+              <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
+                Total Value
+              </Text>
+              <Text
+                fontSize="md"
+                fontWeight="700"
+                fontFamily="mono"
+                color="var(--accent)"
+              >
+                ${totalValue.toFixed(2)}
+              </Text>
+            </Box>
+          )}
+        </Flex>
+
+        {loading ? (
+          <VStack spacing={2} align="stretch">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton
+                key={i}
+                h="64px"
+                rounded="xl"
+                startColor="var(--bg-surface)"
+                endColor="var(--bg-elevated)"
+              />
+            ))}
+          </VStack>
+        ) : holdings.length === 0 ? (
+          <Flex
+            h="200px"
+            align="center"
+            justify="center"
+            bg="var(--bg-surface)"
+            border="1px solid"
+            borderColor="var(--border)"
+            rounded="xl"
+          >
+            <Text color="var(--text-tertiary)" fontSize="sm">
+              No token holdings found
+            </Text>
+          </Flex>
+        ) : (
+          <Box
+            bg="var(--bg-surface)"
+            border="1px solid"
+            borderColor="var(--border)"
+            rounded="xl"
+            overflow="hidden"
+          >
+            {/* Table header */}
+            <Flex
+              px={4}
+              py={2.5}
+              fontSize="9px"
+              color="var(--text-tertiary)"
+              textTransform="uppercase"
+              letterSpacing="0.5px"
+              borderBottom="1px solid"
+              borderColor="var(--border)"
+            >
+              <Text flex={1}>Token</Text>
+              <Text flex="0 0 120px" textAlign="right">Balance</Text>
+              <Text flex="0 0 100px" textAlign="right">Price</Text>
+              <Text flex="0 0 100px" textAlign="right">Value</Text>
+            </Flex>
+
+            {/* Rows */}
+            {holdings.map((h) => (
+              <Link
+                key={h.launch.curveAddress}
+                as={NextLink}
+                href={`/token/${h.launch.curveAddress}`}
+                _hover={{ textDecoration: "none" }}
+                display="block"
+              >
+                <Flex
+                  px={4}
+                  py={3}
+                  align="center"
+                  borderBottom="1px solid"
+                  borderColor="var(--border)"
+                  _hover={{ bg: "var(--bg-elevated)" }}
+                  transition="background 0.1s"
+                  _last={{ borderBottom: "none" }}
+                >
+                  {/* Token info */}
+                  <Flex flex={1} align="center" gap={3} minW={0}>
+                    {h.launch.imageUrl ? (
+                      <Box
+                        w="32px"
+                        h="32px"
+                        rounded="full"
+                        overflow="hidden"
+                        flexShrink={0}
+                        bg="var(--bg-elevated)"
+                      >
+                        <img
+                          src={h.launch.imageUrl}
+                          alt={h.launch.name}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Flex
+                        w="32px"
+                        h="32px"
+                        rounded="full"
+                        bg={
+                          h.graduated
+                            ? "rgba(255,215,0,0.15)"
+                            : "var(--accent-glow)"
+                        }
+                        align="center"
+                        justify="center"
+                        flexShrink={0}
+                      >
+                        <Text
+                          fontSize="10px"
+                          fontWeight="700"
+                          color={h.graduated ? "#ffd700" : "var(--accent)"}
+                        >
+                          {h.launch.symbol.slice(0, 2)}
+                        </Text>
+                      </Flex>
+                    )}
+                    <Box minW={0}>
+                      <Flex align="center" gap={2}>
+                        <Text
+                          fontSize="sm"
+                          fontWeight="600"
+                          color="var(--text-primary)"
+                          isTruncated
+                        >
+                          {h.launch.name}
+                        </Text>
+                        {h.graduated && (
+                          <Box
+                            bg="rgba(255,215,0,0.15)"
+                            color="#ffd700"
+                            px={1.5}
+                            py={0}
+                            rounded="md"
+                            fontSize="9px"
+                            fontWeight="600"
+                            flexShrink={0}
+                          >
+                            GRAD
+                          </Box>
+                        )}
+                      </Flex>
+                      <Text
+                        fontSize="10px"
+                        color="var(--text-tertiary)"
+                        fontFamily="mono"
+                      >
+                        ${h.launch.symbol}
+                      </Text>
+                    </Box>
+                  </Flex>
+
+                  {/* Balance */}
+                  <Text
+                    flex="0 0 120px"
+                    textAlign="right"
+                    fontFamily="mono"
+                    fontSize="sm"
+                    color="var(--text-primary)"
+                  >
+                    {formatBalance(h.balance)}
+                  </Text>
+
+                  {/* Price */}
+                  <Text
+                    flex="0 0 100px"
+                    textAlign="right"
+                    fontFamily="mono"
+                    fontSize="xs"
+                    color="var(--text-secondary)"
+                  >
+                    ${h.priceUsd > 0 ? h.priceUsd.toExponential(2) : "0.00"}
+                  </Text>
+
+                  {/* Value */}
+                  <Text
+                    flex="0 0 100px"
+                    textAlign="right"
+                    fontFamily="mono"
+                    fontSize="sm"
+                    fontWeight="600"
+                    color="var(--accent)"
+                  >
+                    ${h.valueUsd.toFixed(2)}
+                  </Text>
+                </Flex>
+              </Link>
+            ))}
+          </Box>
+        )}
+      </VStack>
+    </Container>
+  );
+}
