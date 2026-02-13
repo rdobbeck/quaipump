@@ -16,11 +16,20 @@ import { useRouter } from "next/navigation";
 import { useAppState } from "@/app/store";
 import { useBondingCurve } from "@/hooks/useBondingCurve";
 import { getExplorerTxUrl } from "@/lib/utils";
+import {
+  TokenomicsToggle,
+  DEFAULT_TOKENOMICS_DATA,
+  type TokenomicsFormData,
+} from "@/components/bonding/TokenomicsToggle";
+import { BONDING_FACTORY_V2_ADDRESS } from "@/lib/constants";
+
+const TOTAL_SUPPLY = 1_000_000_000;
 
 export default function LaunchPage() {
   const router = useRouter();
   const { account } = useAppState();
-  const { launchToken, isLaunching } = useBondingCurve();
+  const { launchToken, launchTokenWithTokenomics, isLaunching } =
+    useBondingCurve();
 
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -29,6 +38,9 @@ export default function LaunchPage() {
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
   const [telegram, setTelegram] = useState("");
+  const [tokenomics, setTokenomics] = useState<TokenomicsFormData>(
+    DEFAULT_TOKENOMICS_DATA
+  );
   const [error, setError] = useState("");
   const [txHash, setTxHash] = useState("");
 
@@ -39,15 +51,66 @@ export default function LaunchPage() {
     }
     setError("");
     try {
-      const result = await launchToken(
-        name.trim(),
-        symbol.trim().toUpperCase(),
-        description.trim(),
-        imageUrl.trim(),
-        website.trim(),
-        twitter.trim(),
-        telegram.trim()
-      );
+      let result;
+
+      if (tokenomics.enabled && BONDING_FACTORY_V2_ADDRESS) {
+        // Validate shares sum to 100%
+        const sharesSum =
+          tokenomics.treasuryShareBps +
+          tokenomics.autoLpShareBps +
+          tokenomics.burnShareBps +
+          tokenomics.reflectionShareBps;
+        if (sharesSum !== 10000) {
+          setError("Tax distribution must sum to 100%");
+          return;
+        }
+        if (!account) {
+          setError("Wallet not connected");
+          return;
+        }
+
+        const maxWalletAmount =
+          parseFloat(tokenomics.maxWalletPercent || "0") > 0
+            ? String(
+                (parseFloat(tokenomics.maxWalletPercent) / 100) * TOTAL_SUPPLY
+              )
+            : "0";
+        const maxTxAmount =
+          parseFloat(tokenomics.maxTxPercent || "0") > 0
+            ? String(
+                (parseFloat(tokenomics.maxTxPercent) / 100) * TOTAL_SUPPLY
+              )
+            : "0";
+
+        result = await launchTokenWithTokenomics(
+          name.trim(),
+          symbol.trim().toUpperCase(),
+          {
+            buyTaxBps: tokenomics.buyTaxBps,
+            sellTaxBps: tokenomics.sellTaxBps,
+            treasuryShareBps: tokenomics.treasuryShareBps,
+            autoLpShareBps: tokenomics.autoLpShareBps,
+            burnShareBps: tokenomics.burnShareBps,
+            reflectionShareBps: tokenomics.reflectionShareBps,
+            maxWalletAmount,
+            maxTxAmount,
+            burnOnTransfer: tokenomics.burnOnTransfer,
+            burnOnTransferBps: tokenomics.burnOnTransferBps,
+            treasuryWallet: tokenomics.treasuryWallet || account,
+          }
+        );
+      } else {
+        result = await launchToken(
+          name.trim(),
+          symbol.trim().toUpperCase(),
+          description.trim(),
+          imageUrl.trim(),
+          website.trim(),
+          twitter.trim(),
+          telegram.trim()
+        );
+      }
+
       setTxHash(result.txHash);
       if (result.curveAddress) {
         setTimeout(() => {
@@ -65,7 +128,10 @@ export default function LaunchPage() {
     website,
     twitter,
     telegram,
+    tokenomics,
+    account,
     launchToken,
+    launchTokenWithTokenomics,
     router,
   ]);
 
@@ -289,6 +355,11 @@ export default function LaunchPage() {
               _placeholder={{ color: "var(--text-tertiary)" }}
             />
           </Box>
+
+          {/* Tokenomics Toggle */}
+          {BONDING_FACTORY_V2_ADDRESS && (
+            <TokenomicsToggle value={tokenomics} onChange={setTokenomics} />
+          )}
 
           {/* Fixed params info */}
           <Box

@@ -133,12 +133,7 @@ export function useBondingCurve() {
     async (
       name: string,
       symbol: string,
-      tokenomics: TokenomicsConfig,
-      description: string = "",
-      imageUrl: string = "",
-      website: string = "",
-      twitter: string = "",
-      telegram: string = ""
+      tokenomics: TokenomicsConfig
     ) => {
       if (!web3Provider || !account) {
         throw new Error("Wallet not connected");
@@ -445,33 +440,90 @@ export function useBondingCurve() {
   const getAllLaunches = useCallback(async (): Promise<LaunchInfo[]> => {
     const quais = await import("quais");
     const provider = await getReadProvider();
-    const contract = new quais.Contract(
+
+    // Fetch V1 launches
+    const v1Contract = new quais.Contract(
       BONDING_FACTORY_ADDRESS,
       BondingCurveFactoryABI,
       provider
     );
 
-    const total = Number(await contract.getTotalLaunches());
-    if (total === 0) return [];
+    const total = Number(await v1Contract.getTotalLaunches());
+    const v1Launches: LaunchInfo[] = total === 0
+      ? []
+      : (await v1Contract.getLaunchesPaginated(0, total)).map(
+          (info: Record<string, unknown>, i: number) => ({
+            launchId: i,
+            tokenAddress: info.tokenAddress as string,
+            curveAddress: info.curveAddress as string,
+            creator: info.creator as string,
+            name: info.name as string,
+            symbol: info.symbol as string,
+            description: info.description as string,
+            imageUrl: info.imageUrl as string,
+            website: info.website as string,
+            twitter: info.twitter as string,
+            telegram: info.telegram as string,
+            createdAt: Number(info.createdAt),
+            stakedAmount: quais.formatQuai(info.stakedAmount as bigint ?? 0n),
+          })
+        );
 
-    const results = await contract.getLaunchesPaginated(0, total);
+    // Fetch V2 launches (if factory configured)
+    if (!BONDING_FACTORY_V2_ADDRESS) return v1Launches;
 
-    const quaisModule = quais;
-    return results.map((info: Record<string, unknown>, i: number) => ({
-      launchId: i,
-      tokenAddress: info.tokenAddress as string,
-      curveAddress: info.curveAddress as string,
-      creator: info.creator as string,
-      name: info.name as string,
-      symbol: info.symbol as string,
-      description: info.description as string,
-      imageUrl: info.imageUrl as string,
-      website: info.website as string,
-      twitter: info.twitter as string,
-      telegram: info.telegram as string,
-      createdAt: Number(info.createdAt),
-      stakedAmount: quaisModule.formatQuai(info.stakedAmount as bigint ?? 0n),
-    }));
+    try {
+      const v2Contract = new quais.Contract(
+        BONDING_FACTORY_V2_ADDRESS,
+        BondingCurveFactoryV2ABI,
+        provider
+      );
+
+      const totalV2 = Number(await v2Contract.getTotalLaunches());
+      if (totalV2 === 0) return v1Launches;
+
+      // V2 LaunchInfo lacks metadata — read name/symbol from token contracts
+      const v2Launches: LaunchInfo[] = await Promise.all(
+        Array.from({ length: totalV2 }, async (_, i) => {
+          const info = await v2Contract.getLaunchInfo(i);
+          let tokenName = "";
+          let tokenSymbol = "";
+          try {
+            const tokenContract = new quais.Contract(
+              info.tokenAddress,
+              BondingCurveTokenV2ABI,
+              provider
+            );
+            [tokenName, tokenSymbol] = await Promise.all([
+              tokenContract.name(),
+              tokenContract.symbol(),
+            ]);
+          } catch {
+            // fallback if token read fails
+          }
+          return {
+            launchId: total + i, // offset to avoid ID collision with V1
+            tokenAddress: info.tokenAddress as string,
+            curveAddress: info.curveAddress as string,
+            creator: info.creator as string,
+            name: tokenName,
+            symbol: tokenSymbol,
+            description: "",
+            imageUrl: "",
+            website: "",
+            twitter: "",
+            telegram: "",
+            createdAt: Number(info.createdAt),
+            stakedAmount: "0",
+          };
+        })
+      );
+
+      return [...v1Launches, ...v2Launches];
+    } catch {
+      // V2 factory not available, return V1 only
+      return v1Launches;
+    }
   }, [getReadProvider]);
 
   const getLaunchesByCreator = useCallback(async (creatorAddress: string): Promise<LaunchInfo[]> => {

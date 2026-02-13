@@ -44,10 +44,9 @@ export function TokenomicsStatus({
         provider
       );
 
-      const [tax, fees, isGraduated] = await Promise.all([
+      const [tax, fees] = await Promise.all([
         contract.getTaxConfig(),
         contract.totalFees(),
-        contract.graduated(),
       ]);
 
       setTaxConfig({
