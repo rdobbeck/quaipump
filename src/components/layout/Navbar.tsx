@@ -14,6 +14,7 @@ import {
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@/components/wallet/ConnectButton";
+import { NavSearch } from "@/components/layout/NavSearch";
 import { WQI_ENABLED } from "@/lib/constants";
 
 const BASE_NAV_LINKS = [
@@ -109,6 +110,9 @@ export function Navbar() {
           </HStack>
 
           <HStack spacing={3} flexShrink={0}>
+            <Box display={{ base: "none", md: "block" }}>
+              <NavSearch />
+            </Box>
             <ConnectButton />
             <IconButton
               display={{ base: "flex", md: "none" }}
@@ -150,6 +154,9 @@ export function Navbar() {
         >
           <Container maxW="container.xl" py={3}>
             <VStack spacing={1} align="stretch">
+              <Box mb={2}>
+                <NavSearch />
+              </Box>
               {navLinks.map((link) => {
                 const isActive =
                   link.href === "/"
