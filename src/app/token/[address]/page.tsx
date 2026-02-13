@@ -52,6 +52,7 @@ export default function TokenDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const launchRef = useRef<LaunchInfo | null>(null);
+  const initialPriceRef = useRef<number | null>(null);
 
   const REFRESH_INTERVAL = 15_000;
 
@@ -243,6 +244,15 @@ export default function TokenDetailPage() {
   const priceUsd = priceQuai * QUAI_USD_PRICE;
   const mcapUsd = priceUsd * BONDING_TOTAL_SUPPLY;
 
+  // Track initial price for % change
+  if (priceUsd > 0 && initialPriceRef.current === null) {
+    initialPriceRef.current = priceUsd;
+  }
+  const priceChange =
+    initialPriceRef.current && initialPriceRef.current > 0 && priceUsd > 0
+      ? ((priceUsd - initialPriceRef.current) / initialPriceRef.current) * 100
+      : null;
+
   return (
     <Container maxW="container.xl" py={6}>
       <VStack spacing={4} align="stretch">
@@ -363,6 +373,17 @@ export default function TokenDetailPage() {
                   <Text fontSize="sm" fontWeight="600" fontFamily="mono" color="var(--accent)">
                     ${priceUsd > 0 ? priceUsd.toExponential(2) : "0.00"}
                   </Text>
+                  {priceChange !== null && priceChange !== 0 && (
+                    <Text
+                      fontSize="xs"
+                      fontWeight="600"
+                      fontFamily="mono"
+                      color={priceChange > 0 ? "var(--accent)" : "var(--sell)"}
+                    >
+                      {priceChange > 0 ? "+" : ""}
+                      {priceChange.toFixed(2)}%
+                    </Text>
+                  )}
                   <Text fontSize="xs" color="var(--text-tertiary)">
                     MCap ${mcapUsd > 0 ? mcapUsd.toFixed(2) : "0.00"}
                   </Text>
