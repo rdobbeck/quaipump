@@ -2,15 +2,31 @@
 
 import { useCallback, useState } from "react";
 import { useAppState } from "@/app/store";
-import { BONDING_FACTORY_ADDRESS, NETWORK } from "@/lib/constants";
+import { BONDING_FACTORY_ADDRESS, BONDING_FACTORY_V2_ADDRESS, NETWORK } from "@/lib/constants";
 import BondingCurveFactoryABI from "@/lib/abi/BondingCurveFactory.json";
+import BondingCurveFactoryV2ABI from "@/lib/abi/BondingCurveFactoryV2.json";
 import BondingCurveABI from "@/lib/abi/BondingCurve.json";
 import BondingCurveTokenABI from "@/lib/abi/BondingCurveToken.json";
+import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
 // Bonding curve constants for max-buy chunk calculation
 const K_BIGINT = 36_482_000_000n * (10n ** 36n);
 const MAX_BUY_TOKENS_WEI = 16_000_000n * (10n ** 18n);
 const FEE_BPS_BIGINT = 100n;
+
+export interface TokenomicsConfig {
+  buyTaxBps: number;
+  sellTaxBps: number;
+  treasuryShareBps: number;
+  autoLpShareBps: number;
+  burnShareBps: number;
+  reflectionShareBps: number;
+  maxWalletAmount: string; // in tokens (decimal string)
+  maxTxAmount: string; // in tokens (decimal string)
+  burnOnTransfer: boolean;
+  burnOnTransferBps: number;
+  treasuryWallet: string;
+}
 
 export interface LaunchInfo {
   launchId: number;
@@ -95,6 +111,87 @@ export function useBondingCurve() {
               topics: log.topics,
               data: log.data,
             });
+            if (parsed?.name === "TokenLaunched") {
+              tokenAddress = parsed.args.tokenAddress;
+              curveAddress = parsed.args.curveAddress;
+              break;
+            }
+          } catch {
+            // Skip logs that don't match
+          }
+        }
+
+        return { tokenAddress, curveAddress, txHash: receipt.hash };
+      } finally {
+        setIsLaunching(false);
+      }
+    },
+    [web3Provider, account]
+  );
+
+  const launchTokenWithTokenomics = useCallback(
+    async (
+      name: string,
+      symbol: string,
+      tokenomics: TokenomicsConfig,
+      description: string = "",
+      imageUrl: string = "",
+      website: string = "",
+      twitter: string = "",
+      telegram: string = ""
+    ) => {
+      if (!web3Provider || !account) {
+        throw new Error("Wallet not connected");
+      }
+      if (!BONDING_FACTORY_V2_ADDRESS) {
+        throw new Error("V2 factory address not configured");
+      }
+
+      setIsLaunching(true);
+      try {
+        const quais = await import("quais");
+        const provider = web3Provider as InstanceType<typeof quais.BrowserProvider>;
+        const signer = await provider.getSigner();
+
+        const contract = new quais.Contract(
+          BONDING_FACTORY_V2_ADDRESS,
+          BondingCurveFactoryV2ABI,
+          signer
+        );
+
+        const fee = await contract.creationFee();
+
+        const params = {
+          name,
+          symbol,
+          decimals: 18,
+          taxConfig: {
+            buyTaxBps: tokenomics.buyTaxBps,
+            sellTaxBps: tokenomics.sellTaxBps,
+            treasuryShareBps: tokenomics.treasuryShareBps,
+            autoLpShareBps: tokenomics.autoLpShareBps,
+            burnShareBps: tokenomics.burnShareBps,
+            reflectionShareBps: tokenomics.reflectionShareBps,
+          },
+          limitConfig: {
+            maxWalletAmount: quais.parseUnits(tokenomics.maxWalletAmount || "0", 18),
+            maxTxAmount: quais.parseUnits(tokenomics.maxTxAmount || "0", 18),
+          },
+          burnOnTransfer: tokenomics.burnOnTransfer,
+          burnOnTransferBps: tokenomics.burnOnTransferBps,
+          bondingCurve: "0x0000000000000000000000000000000000000000", // factory overrides
+          treasuryWallet: tokenomics.treasuryWallet,
+        };
+
+        const tx = await contract.launchTokenWithTokenomics(params, { value: fee });
+        const receipt = await tx.wait();
+
+        const iface = new quais.Interface(BondingCurveFactoryV2ABI);
+        let tokenAddress = "";
+        let curveAddress = "";
+        for (const log of receipt.logs) {
+          try {
+            const parsed = iface.parseLog({ topics: log.topics, data: log.data });
             if (parsed?.name === "TokenLaunched") {
               tokenAddress = parsed.args.tokenAddress;
               curveAddress = parsed.args.curveAddress;
@@ -413,6 +510,7 @@ export function useBondingCurve() {
 
   return {
     launchToken,
+    launchTokenWithTokenomics,
     buyTokens,
     buyTokensChunked,
     sellTokens,

@@ -4,13 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Box, Flex, Text, Input, Button } from "@chakra-ui/react";
 import { useBondingCurve } from "@/hooks/useBondingCurve";
 import { useAppState } from "@/app/store";
-import { QUAI_USD_PRICE } from "@/lib/constants";
+import { NETWORK, QUAI_USD_PRICE } from "@/lib/constants";
+import GraduatedPoolABI from "@/lib/abi/GraduatedPool.json";
+import BondingCurveTokenABI from "@/lib/abi/BondingCurveToken.json";
 
 interface TradePanelProps {
   curveAddress: string;
   tokenAddress: string;
   tokenSymbol: string;
   graduated: boolean;
+  poolAddress?: string;
   onTrade?: () => void;
 }
 
@@ -23,9 +26,10 @@ export function TradePanel({
   tokenAddress,
   tokenSymbol,
   graduated,
+  poolAddress,
   onTrade,
 }: TradePanelProps) {
-  const { account } = useAppState();
+  const { account, web3Provider } = useAppState();
   const {
     buyTokensChunked,
     sellTokens,
@@ -42,6 +46,8 @@ export function TradePanel({
   const [slippage, setSlippage] = useState(1);
   const [balance, setBalance] = useState("0");
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [poolSwapping, setPoolSwapping] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [chunkProgress, setChunkProgress] = useState<{
     current: number;
     total: number;
@@ -63,19 +69,35 @@ export function TradePanel({
 
   // Debounced quote fetching
   useEffect(() => {
-    if (!amount || parseFloat(amount) <= 0 || graduated) {
+    if (!amount || parseFloat(amount) <= 0) {
       setQuote("");
       return;
     }
     const timer = setTimeout(async () => {
       setQuoteLoading(true);
       try {
-        if (mode === "buy") {
-          const q = await getBuyQuote(curveAddress, amount);
-          setQuote(q);
+        if (graduated && poolAddress) {
+          // Use pool's getAmountOut
+          const quais = await import("quais");
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const pool = new quais.Contract(poolAddress, GraduatedPoolABI, provider);
+          const amountIn = mode === "buy"
+            ? quais.parseQuai(amount)
+            : quais.parseUnits(amount, 18);
+          const out: bigint = await pool.getAmountOut(amountIn, mode === "buy");
+          setQuote(
+            mode === "buy"
+              ? quais.formatUnits(out, 18)
+              : quais.formatQuai(out)
+          );
         } else {
-          const q = await getSellQuote(curveAddress, amount);
-          setQuote(q);
+          if (mode === "buy") {
+            const q = await getBuyQuote(curveAddress, amount);
+            setQuote(q);
+          } else {
+            const q = await getSellQuote(curveAddress, amount);
+            setQuote(q);
+          }
         }
       } catch {
         setQuote("");
@@ -85,8 +107,9 @@ export function TradePanel({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [amount, mode, curveAddress, graduated, getBuyQuote, getSellQuote]);
+  }, [amount, mode, curveAddress, graduated, poolAddress, getBuyQuote, getSellQuote]);
 
+  // Bonding curve buy (with chunking)
   const handleBuy = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     try {
@@ -113,16 +136,11 @@ export function TradePanel({
       setChunkProgress(null);
     }
   }, [
-    amount,
-    slippage,
-    curveAddress,
-    tokenAddress,
-    account,
-    buyTokensChunked,
-    getTokenBalance,
-    onTrade,
+    amount, slippage, curveAddress, tokenAddress, account,
+    buyTokensChunked, getTokenBalance, onTrade,
   ]);
 
+  // Bonding curve sell
   const handleSell = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     try {
@@ -141,15 +159,98 @@ export function TradePanel({
       console.error("Sell failed:", err);
     }
   }, [
-    amount,
-    quote,
-    slippage,
-    curveAddress,
-    tokenAddress,
-    account,
-    sellTokens,
-    getTokenBalance,
-    onTrade,
+    amount, quote, slippage, curveAddress, tokenAddress, account,
+    sellTokens, getTokenBalance, onTrade,
+  ]);
+
+  // Pool buy (swapQuaiForTokens)
+  const handlePoolBuy = useCallback(async () => {
+    if (!amount || parseFloat(amount) <= 0 || !poolAddress || !web3Provider) return;
+    setPoolSwapping(true);
+    try {
+      const quais = await import("quais");
+      const provider = web3Provider as InstanceType<typeof quais.BrowserProvider>;
+      const signer = await provider.getSigner();
+      const pool = new quais.Contract(poolAddress, GraduatedPoolABI, signer);
+
+      const quaiAmount = quais.parseQuai(amount);
+
+      // Get quote for min out
+      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const readPool = new quais.Contract(poolAddress, GraduatedPoolABI, readProvider);
+      const expectedOut: bigint = await readPool.getAmountOut(quaiAmount, true);
+      const slippageBps = BigInt(Math.floor(slippage * 100));
+      const minOut = expectedOut * (10000n - slippageBps) / 10000n;
+
+      const tx = await pool.swapQuaiForTokens(minOut, { value: quaiAmount });
+      await tx.wait();
+
+      setAmount("");
+      setQuote("");
+      if (account) {
+        const bal = await getTokenBalance(tokenAddress, account);
+        setBalance(bal);
+      }
+      onTrade?.();
+    } catch (err) {
+      console.error("Pool buy failed:", err);
+    } finally {
+      setPoolSwapping(false);
+    }
+  }, [
+    amount, slippage, poolAddress, web3Provider, tokenAddress, account,
+    getTokenBalance, onTrade,
+  ]);
+
+  // Pool sell (approve + swapTokensForQuai)
+  const handlePoolSell = useCallback(async () => {
+    if (!amount || parseFloat(amount) <= 0 || !poolAddress || !web3Provider) return;
+    setPoolSwapping(true);
+    try {
+      const quais = await import("quais");
+      const provider = web3Provider as InstanceType<typeof quais.BrowserProvider>;
+      const signer = await provider.getSigner();
+      const tokenAmount = quais.parseUnits(amount, 18);
+
+      // Check allowance and approve if needed
+      const tokenContract = new quais.Contract(tokenAddress, BondingCurveTokenABI, signer);
+      const signerAddress = await signer.getAddress();
+      const currentAllowance: bigint = await tokenContract.allowance(signerAddress, poolAddress);
+
+      if (currentAllowance < tokenAmount) {
+        setApproving(true);
+        const approveTx = await tokenContract.approve(poolAddress, tokenAmount);
+        await approveTx.wait();
+        setApproving(false);
+      }
+
+      // Get quote for min out
+      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const readPool = new quais.Contract(poolAddress, GraduatedPoolABI, readProvider);
+      const expectedOut: bigint = await readPool.getAmountOut(tokenAmount, false);
+      const slippageBps = BigInt(Math.floor(slippage * 100));
+      const minOut = expectedOut * (10000n - slippageBps) / 10000n;
+
+      const pool = new quais.Contract(poolAddress, GraduatedPoolABI, signer);
+      const tx = await pool.swapTokensForQuai(tokenAmount, minOut);
+      await tx.wait();
+
+      setAmount("");
+      setQuote("");
+      if (account) {
+        const bal = await getTokenBalance(tokenAddress, account);
+        setBalance(bal);
+      }
+      onTrade?.();
+    } catch (err) {
+      console.error("Pool sell failed:", err);
+      setApproving(false);
+    } finally {
+      setPoolSwapping(false);
+    }
+  }, [
+    amount, slippage, poolAddress, web3Provider, tokenAddress, account,
+    getTokenBalance, onTrade,
   ]);
 
   const handleSellPercent = (pct: number) => {
@@ -159,8 +260,28 @@ export function TradePanel({
     }
   };
 
-  const isProcessing = isBuying || isSelling;
+  const isProcessing = isBuying || isSelling || poolSwapping;
   const connected = !!account;
+  const canTradeGraduated = graduated && !!poolAddress;
+
+  const handleAction = () => {
+    if (canTradeGraduated) {
+      mode === "buy" ? handlePoolBuy() : handlePoolSell();
+    } else {
+      mode === "buy" ? handleBuy() : handleSell();
+    }
+  };
+
+  const getButtonText = () => {
+    if (approving) return "Approving...";
+    if (mode === "buy") return `Buy ${tokenSymbol}`;
+    return `Sell ${tokenSymbol}`;
+  };
+
+  const getLoadingText = () => {
+    if (approving) return "Approving...";
+    return mode === "buy" ? "Buying..." : "Selling...";
+  };
 
   return (
     <Box
@@ -209,6 +330,23 @@ export function TradePanel({
           Sell
         </Button>
       </Flex>
+
+      {/* Trading venue indicator */}
+      {canTradeGraduated && (
+        <Box
+          bg="rgba(255,215,0,0.08)"
+          border="1px solid"
+          borderColor="rgba(255,215,0,0.2)"
+          rounded="lg"
+          px={3}
+          py={1.5}
+          mb={3}
+        >
+          <Text fontSize="10px" color="#ffd700" textAlign="center">
+            Trading on Graduated Pool
+          </Text>
+        </Box>
+      )}
 
       {/* Amount Input */}
       <Box mb={3}>
@@ -296,7 +434,7 @@ export function TradePanel({
       </Flex>
 
       {/* Quote Display */}
-      {(quote || quoteLoading) && !graduated && (
+      {(quote || quoteLoading) && (
         <Box
           bg="var(--bg-elevated)"
           rounded="lg"
@@ -332,7 +470,7 @@ export function TradePanel({
         </Box>
       )}
 
-      {/* Chunk Progress */}
+      {/* Chunk Progress (bonding curve only) */}
       {chunkProgress && (
         <Box mb={3}>
           <Text fontSize="10px" color="var(--accent)" textAlign="center">
@@ -342,13 +480,7 @@ export function TradePanel({
       )}
 
       {/* Action Button */}
-      {graduated ? (
-        <Box textAlign="center" py={2}>
-          <Text fontSize="xs" color="var(--text-tertiary)">
-            This token has graduated. Trade on the DEX.
-          </Text>
-        </Box>
-      ) : !connected ? (
+      {!connected ? (
         <Button
           w="100%"
           bg="var(--bg-elevated)"
@@ -375,11 +507,11 @@ export function TradePanel({
                 : "0 0 20px rgba(255,82,82,0.15)",
           }}
           isLoading={isProcessing}
-          loadingText={mode === "buy" ? "Buying..." : "Selling..."}
+          loadingText={getLoadingText()}
           isDisabled={!amount || parseFloat(amount) <= 0}
-          onClick={mode === "buy" ? handleBuy : handleSell}
+          onClick={handleAction}
         >
-          {mode === "buy" ? `Buy ${tokenSymbol}` : `Sell ${tokenSymbol}`}
+          {getButtonText()}
         </Button>
       )}
 

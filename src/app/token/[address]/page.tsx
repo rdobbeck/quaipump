@@ -28,6 +28,8 @@ import { TradePanel } from "@/components/bonding/TradePanel";
 import { CurveStats } from "@/components/bonding/CurveStats";
 import { CurveProgress } from "@/components/bonding/CurveProgress";
 import { TokenComments } from "@/components/bonding/TokenComments";
+import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
+import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
 export default function TokenDetailPage() {
   const params = useParams<{ address: string }>();
@@ -41,6 +43,7 @@ export default function TokenDetailPage() {
     quai: string;
     token: string;
   } | null>(null);
+  const [hasTokenomics, setHasTokenomics] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -64,6 +67,23 @@ export default function TokenDetailPage() {
       // Fetch curve state
       const state = await getCurveState(found.curveAddress);
       setCurveState(state);
+
+      // Detect V2 token (has tokenomics)
+      try {
+        const quais = await import("quais");
+        const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+        const tokenContract = new quais.Contract(
+          found.tokenAddress,
+          BondingCurveTokenV2ABI,
+          provider
+        );
+        const tax = await tokenContract.getTaxConfig();
+        const hasTax =
+          Number(tax.buyTaxBps) > 0 || Number(tax.sellTaxBps) > 0;
+        setHasTokenomics(hasTax);
+      } catch {
+        setHasTokenomics(false);
+      }
 
       // Fetch pool reserves if graduated
       if (state.graduated && state.pool) {
@@ -434,8 +454,16 @@ export default function TokenDetailPage() {
                 tokenAddress={launch.tokenAddress}
                 tokenSymbol={launch.symbol}
                 graduated={graduated}
+                poolAddress={curveState?.pool}
                 onTrade={fetchData}
               />
+
+              {hasTokenomics && (
+                <TokenomicsStatus
+                  tokenAddress={launch.tokenAddress}
+                  graduated={graduated}
+                />
+              )}
 
               <CurveProgress curveState={curveState} loading={false} />
             </VStack>

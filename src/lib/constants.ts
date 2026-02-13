@@ -35,6 +35,9 @@ export const WQI_FAUCET_ENABLED = !!WQI_FAUCET_ADDRESS;
 export const BONDING_FACTORY_ADDRESS =
   process.env.NEXT_PUBLIC_BONDING_FACTORY_ADDRESS || "";
 
+export const BONDING_FACTORY_V2_ADDRESS =
+  process.env.NEXT_PUBLIC_BONDING_FACTORY_V2_ADDRESS || "";
+
 export const QUAI_USD_PRICE = 0.052;
 export const BONDING_TOTAL_SUPPLY = 1_000_000_000; // 1B tokens
 

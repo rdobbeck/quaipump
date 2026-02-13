@@ -2,5 +2,8 @@
   "function reserveQuai() view returns (uint256)",
   "function reserveToken() view returns (uint256)",
   "function token() view returns (address)",
-  "function getAmountOut(uint256 amountIn, bool quaiIn) view returns (uint256)"
+  "function getAmountOut(uint256 amountIn, bool quaiIn) view returns (uint256)",
+  "function swapQuaiForTokens(uint256 minOut) payable",
+  "function swapTokensForQuai(uint256 tokenAmount, uint256 minOut)",
+  "event Swap(address indexed sender, bool quaiIn, uint256 amountIn, uint256 amountOut)"
 ]
