@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Container,
@@ -47,12 +47,49 @@ export default function TokenDetailPage() {
   const [hasTokenomics, setHasTokenomics] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const launchRef = useRef<LaunchInfo | null>(null);
 
+  const REFRESH_INTERVAL = 15_000;
+
+  // Lightweight refresh: only curve state + pool reserves
+  const refreshState = useCallback(async () => {
+    const current = launchRef.current;
+    if (!current) return;
+    try {
+      const state = await getCurveState(current.curveAddress);
+      setCurveState(state);
+
+      if (state.graduated && state.pool) {
+        try {
+          const quais = await import("quais");
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const poolContract = new quais.Contract(
+            state.pool,
+            GraduatedPoolABI,
+            provider
+          );
+          const [rQuai, rToken] = await Promise.all([
+            poolContract.reserveQuai(),
+            poolContract.reserveToken(),
+          ]);
+          setPoolReserves({
+            quai: quais.formatQuai(rQuai),
+            token: quais.formatUnits(rToken, 18),
+          });
+        } catch {
+          // Pool reserves unavailable
+        }
+      }
+    } catch {
+      // Refresh failed silently
+    }
+  }, [getCurveState]);
+
+  // Initial full fetch
   const fetchData = useCallback(async () => {
     if (!address) return;
     setLoading(true);
     try {
-      // Find launch by curveAddress
       const launches = await getAllLaunches();
       const found = launches.find(
         (l) => l.curveAddress.toLowerCase() === address.toLowerCase()
@@ -64,6 +101,7 @@ export default function TokenDetailPage() {
       }
 
       setLaunch(found);
+      launchRef.current = found;
 
       // Fetch curve state
       const state = await getCurveState(found.curveAddress);
@@ -115,9 +153,17 @@ export default function TokenDetailPage() {
     }
   }, [address, getAllLaunches, getCurveState]);
 
+  // Initial load
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Auto-refresh polling
+  useEffect(() => {
+    if (loading || notFound || !launchRef.current) return;
+    const interval = setInterval(refreshState, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [loading, notFound, refreshState]);
 
   if (notFound) {
     return (
@@ -463,7 +509,7 @@ export default function TokenDetailPage() {
                 tokenSymbol={launch.symbol}
                 graduated={graduated}
                 poolAddress={curveState?.pool}
-                onTrade={fetchData}
+                onTrade={refreshState}
               />
 
               {hasTokenomics && (
