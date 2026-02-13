@@ -1,122 +1,160 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import {
   Container,
   Grid,
   GridItem,
   VStack,
+  HStack,
   Box,
+  Flex,
   Text,
   Link,
   Skeleton,
-  SkeletonText,
-  Alert,
-  AlertIcon,
-  AlertDescription,
 } from "@chakra-ui/react";
-import NextLink from "next/link";
-import { useTokenomicsToken, type TokenInfo } from "@/hooks/useTokenomicsToken";
-import { useTokenomicsFactory, type TokenDeployment } from "@/hooks/useTokenomicsFactory";
-import { TokenHeader } from "@/components/dashboard/TokenHeader";
-import { TokenStats } from "@/components/dashboard/TokenStats";
-import { HolderInfo } from "@/components/dashboard/HolderInfo";
-import { OwnerPanel } from "@/components/owner/OwnerPanel";
-import { SwapPanel } from "@/components/trade/SwapPanel";
+import {
+  useBondingCurve,
+  type LaunchInfo,
+  type CurveState,
+} from "@/hooks/useBondingCurve";
+import { NETWORK, QUAI_USD_PRICE, BONDING_TOTAL_SUPPLY } from "@/lib/constants";
+import { shortenAddress, getExplorerAddressUrl } from "@/lib/utils";
+import { timeAgo } from "@/lib/time";
+import GraduatedPoolABI from "@/lib/abi/GraduatedPool.json";
+import { PriceChart } from "@/components/bonding/PriceChart";
+import { TradePanel } from "@/components/bonding/TradePanel";
+import { CurveStats } from "@/components/bonding/CurveStats";
+import { CurveProgress } from "@/components/bonding/CurveProgress";
 import { TokenComments } from "@/components/bonding/TokenComments";
 
-export default function TokenDashboardPage() {
+export default function TokenDetailPage() {
   const params = useParams<{ address: string }>();
   const address = params.address;
-  const { getTokenInfo } = useTokenomicsToken();
-  const { getDeploymentCount, getDeployment } = useTokenomicsFactory();
 
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
-  const [deployment, setDeployment] = useState<TokenDeployment | null>(null);
+  const { getAllLaunches, getCurveState } = useBondingCurve();
+
+  const [launch, setLaunch] = useState<LaunchInfo | null>(null);
+  const [curveState, setCurveState] = useState<CurveState | null>(null);
+  const [poolReserves, setPoolReserves] = useState<{
+    quai: string;
+    token: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!address) return;
+    setLoading(true);
+    try {
+      // Find launch by curveAddress
+      const launches = await getAllLaunches();
+      const found = launches.find(
+        (l) => l.curveAddress.toLowerCase() === address.toLowerCase()
+      );
+
+      if (!found) {
+        setNotFound(true);
+        return;
+      }
+
+      setLaunch(found);
+
+      // Fetch curve state
+      const state = await getCurveState(found.curveAddress);
+      setCurveState(state);
+
+      // Fetch pool reserves if graduated
+      if (state.graduated && state.pool) {
+        try {
+          const quais = await import("quais");
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const poolContract = new quais.Contract(
+            state.pool,
+            GraduatedPoolABI,
+            provider
+          );
+          const [rQuai, rToken] = await Promise.all([
+            poolContract.reserveQuai(),
+            poolContract.reserveToken(),
+          ]);
+          setPoolReserves({
+            quai: quais.formatQuai(rQuai),
+            token: quais.formatUnits(rToken, 18),
+          });
+        } catch {
+          // Pool reserves unavailable
+        }
+      }
+    } catch {
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [address, getAllLaunches, getCurveState]);
 
   useEffect(() => {
-    if (!address) return;
+    fetchData();
+  }, [fetchData]);
 
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    (async () => {
-      try {
-        const info = await getTokenInfo(address);
-        if (!cancelled) setTokenInfo(info);
-
-        // Find this token's deployment to get vesting/locker addresses
-        const count = await getDeploymentCount();
-        for (let i = 0; i < count; i++) {
-          const d = await getDeployment(i);
-          if (d.token.toLowerCase() === address.toLowerCase()) {
-            if (!cancelled) setDeployment(d);
-            break;
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load token info"
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [address, getTokenInfo, getDeploymentCount, getDeployment]);
-
-  if (error) {
+  if (notFound) {
     return (
       <Container maxW="container.xl" py={8}>
-        <Alert
-          status="error"
+        <Flex
+          h="300px"
+          align="center"
+          justify="center"
           bg="var(--bg-surface)"
           border="1px solid"
-          borderColor="var(--sell)"
-          borderRadius="xl"
+          borderColor="var(--border)"
+          rounded="xl"
         >
-          <AlertIcon color="var(--sell)" />
-          <AlertDescription fontSize="sm">{error}</AlertDescription>
-        </Alert>
+          <Text color="var(--text-tertiary)" fontSize="sm">
+            Token not found
+          </Text>
+        </Flex>
       </Container>
     );
   }
 
-  if (loading || !tokenInfo) {
+  if (loading || !launch) {
     return (
       <Container maxW="container.xl" py={8}>
         <VStack spacing={4} align="stretch">
-          <Skeleton height="100px" borderRadius="xl" />
+          <Skeleton
+            h="80px"
+            rounded="xl"
+            startColor="var(--bg-surface)"
+            endColor="var(--bg-elevated)"
+          />
           <Grid
-            templateColumns={{ base: "1fr", lg: "1fr 380px" }}
-            gap={6}
+            templateColumns={{ base: "1fr", lg: "1fr 360px" }}
+            gap={4}
           >
             <GridItem>
               <VStack spacing={4} align="stretch">
-                <Skeleton height="200px" borderRadius="xl" />
-                <Skeleton height="120px" borderRadius="xl" />
-                <Skeleton height="140px" borderRadius="xl" />
-                <Skeleton height="100px" borderRadius="xl" />
+                <Skeleton
+                  h="260px"
+                  rounded="xl"
+                  startColor="var(--bg-surface)"
+                  endColor="var(--bg-elevated)"
+                />
+                <Skeleton
+                  h="100px"
+                  rounded="xl"
+                  startColor="var(--bg-surface)"
+                  endColor="var(--bg-elevated)"
+                />
               </VStack>
             </GridItem>
             <GridItem>
-              <VStack spacing={4} align="stretch">
-                <Skeleton height="200px" borderRadius="xl" />
-                <SkeletonText
-                  noOfLines={3}
-                  spacing="3"
-                  skeletonHeight="14px"
-                />
-              </VStack>
+              <Skeleton
+                h="400px"
+                rounded="xl"
+                startColor="var(--bg-surface)"
+                endColor="var(--bg-elevated)"
+              />
             </GridItem>
           </Grid>
         </VStack>
@@ -124,108 +162,282 @@ export default function TokenDashboardPage() {
     );
   }
 
+  const graduated = curveState?.graduated ?? false;
+  const priceQuai =
+    graduated && poolReserves && parseFloat(poolReserves.token) > 0
+      ? parseFloat(poolReserves.quai) / parseFloat(poolReserves.token)
+      : curveState
+      ? parseFloat(curveState.currentPrice)
+      : 0;
+  const priceUsd = priceQuai * QUAI_USD_PRICE;
+  const mcapUsd = priceUsd * BONDING_TOTAL_SUPPLY;
+
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={6} align="stretch">
-        <TokenHeader
-          name={tokenInfo.name}
-          symbol={tokenInfo.symbol}
-          address={tokenInfo.address}
-          supplyType={tokenInfo.supplyType}
-        />
-
-        <Grid
-          templateColumns={{ base: "1fr", lg: "1fr 380px" }}
-          gap={6}
+    <Container maxW="container.xl" py={6}>
+      <VStack spacing={4} align="stretch">
+        {/* Header */}
+        <Box
+          bg="var(--bg-surface)"
+          border="1px solid"
+          borderColor="var(--border)"
+          rounded="xl"
+          px={5}
+          py={4}
         >
-          {/* Left column: main content */}
+          <Flex
+            justify="space-between"
+            align={{ base: "start", md: "center" }}
+            direction={{ base: "column", md: "row" }}
+            gap={3}
+          >
+            {/* Left: icon + name + symbol + badges */}
+            <HStack spacing={3}>
+              {launch.imageUrl ? (
+                <Box
+                  w="44px"
+                  h="44px"
+                  rounded="full"
+                  overflow="hidden"
+                  flexShrink={0}
+                  bg="var(--bg-elevated)"
+                >
+                  <img
+                    src={launch.imageUrl}
+                    alt={launch.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Flex
+                  w="44px"
+                  h="44px"
+                  rounded="full"
+                  bg={
+                    graduated
+                      ? "rgba(255,215,0,0.15)"
+                      : "var(--accent-glow)"
+                  }
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Text
+                    fontSize="md"
+                    fontWeight="700"
+                    color={graduated ? "#ffd700" : "var(--accent)"}
+                  >
+                    {launch.symbol.slice(0, 2)}
+                  </Text>
+                </Flex>
+              )}
+              <Box>
+                <HStack spacing={2}>
+                  <Text
+                    fontSize="lg"
+                    fontWeight="700"
+                    color="var(--text-primary)"
+                  >
+                    {launch.name}
+                  </Text>
+                  <Box
+                    bg={
+                      graduated
+                        ? "rgba(255,215,0,0.15)"
+                        : "rgba(0,230,118,0.12)"
+                    }
+                    color={graduated ? "#ffd700" : "var(--accent)"}
+                    px={2}
+                    py={0.5}
+                    rounded="md"
+                    fontSize="11px"
+                    fontWeight="600"
+                  >
+                    ${launch.symbol}
+                  </Box>
+                  {graduated && (
+                    <Box
+                      bg="rgba(255,215,0,0.15)"
+                      color="#ffd700"
+                      px={2}
+                      py={0.5}
+                      rounded="md"
+                      fontSize="10px"
+                      fontWeight="600"
+                    >
+                      GRADUATED
+                    </Box>
+                  )}
+                  {parseFloat(launch.stakedAmount || "0") > 0 && (
+                    <Box
+                      bg="rgba(0,230,118,0.12)"
+                      color="var(--accent)"
+                      px={2}
+                      py={0.5}
+                      rounded="md"
+                      fontSize="10px"
+                      fontWeight="600"
+                    >
+                      STAKED
+                    </Box>
+                  )}
+                </HStack>
+                <HStack spacing={3} mt={1}>
+                  <Text fontSize="sm" fontWeight="600" fontFamily="mono" color="var(--accent)">
+                    ${priceUsd > 0 ? priceUsd.toExponential(2) : "0.00"}
+                  </Text>
+                  <Text fontSize="xs" color="var(--text-tertiary)">
+                    MCap ${mcapUsd > 0 ? mcapUsd.toFixed(2) : "0.00"}
+                  </Text>
+                  <Text fontSize="xs" color="var(--text-tertiary)">
+                    {timeAgo(launch.createdAt)}
+                  </Text>
+                </HStack>
+              </Box>
+            </HStack>
+
+            {/* Right: creator + links */}
+            <HStack spacing={3}>
+              <HStack spacing={1}>
+                <Text fontSize="10px" color="var(--text-tertiary)">
+                  by
+                </Text>
+                <Link
+                  href={getExplorerAddressUrl(launch.creator)}
+                  isExternal
+                  fontSize="xs"
+                  fontFamily="mono"
+                  color="var(--text-secondary)"
+                  _hover={{ color: "var(--accent)" }}
+                >
+                  {shortenAddress(launch.creator)}
+                </Link>
+              </HStack>
+              {launch.website && (
+                <Link
+                  href={launch.website}
+                  isExternal
+                  fontSize="10px"
+                  color="var(--text-secondary)"
+                  bg="var(--bg-elevated)"
+                  px={2}
+                  py={1}
+                  rounded="md"
+                  _hover={{
+                    color: "var(--accent)",
+                    borderColor: "var(--border-hover)",
+                  }}
+                >
+                  Website
+                </Link>
+              )}
+              {launch.twitter && (
+                <Link
+                  href={launch.twitter}
+                  isExternal
+                  fontSize="10px"
+                  color="var(--text-secondary)"
+                  bg="var(--bg-elevated)"
+                  px={2}
+                  py={1}
+                  rounded="md"
+                  _hover={{ color: "var(--accent)" }}
+                >
+                  Twitter
+                </Link>
+              )}
+              {launch.telegram && (
+                <Link
+                  href={launch.telegram}
+                  isExternal
+                  fontSize="10px"
+                  color="var(--text-secondary)"
+                  bg="var(--bg-elevated)"
+                  px={2}
+                  py={1}
+                  rounded="md"
+                  _hover={{ color: "var(--accent)" }}
+                >
+                  Telegram
+                </Link>
+              )}
+              <Link
+                href={getExplorerAddressUrl(launch.curveAddress)}
+                isExternal
+                fontSize="10px"
+                color="var(--text-secondary)"
+                bg="var(--bg-elevated)"
+                px={2}
+                py={1}
+                rounded="md"
+                _hover={{ color: "var(--accent)" }}
+              >
+                Explorer
+              </Link>
+            </HStack>
+          </Flex>
+
+          {/* Description */}
+          {launch.description && (
+            <Text
+              fontSize="xs"
+              color="var(--text-secondary)"
+              mt={3}
+              lineHeight="1.6"
+            >
+              {launch.description}
+            </Text>
+          )}
+        </Box>
+
+        {/* Main terminal layout */}
+        <Grid
+          templateColumns={{ base: "1fr", lg: "1fr 360px" }}
+          gap={4}
+        >
+          {/* Left column: Chart + Stats */}
           <GridItem>
-            <VStack spacing={6} align="stretch">
-              <TokenStats tokenInfo={tokenInfo} />
-
-              <HolderInfo tokenAddress={tokenInfo.address} />
-
-              <OwnerPanel
-                tokenAddress={tokenInfo.address}
-                tokenInfo={tokenInfo}
+            <VStack spacing={4} align="stretch">
+              <PriceChart
+                curveAddress={launch.curveAddress}
+                graduated={graduated}
+                poolAddress={curveState?.pool}
+                currentPrice={priceQuai}
               />
 
-              <TokenComments tokenAddress={tokenInfo.address} />
+              <CurveStats
+                curveState={curveState}
+                poolReserves={poolReserves}
+                loading={false}
+              />
+
+              <TokenComments tokenAddress={launch.curveAddress} />
             </VStack>
           </GridItem>
 
-          {/* Right column: swap + sidebar links */}
+          {/* Right column: Trade + Progress */}
           <GridItem>
-            <VStack spacing={4} align="stretch" position="sticky" top="80px">
-              <SwapPanel
-                tokenAddress={tokenInfo.address}
-                dexRouter={tokenInfo.dexRouter}
-                tokenSymbol={tokenInfo.symbol}
+            <VStack
+              spacing={4}
+              align="stretch"
+              position="sticky"
+              top="80px"
+            >
+              <TradePanel
+                curveAddress={launch.curveAddress}
+                tokenAddress={launch.tokenAddress}
+                tokenSymbol={launch.symbol}
+                graduated={graduated}
+                onTrade={fetchData}
               />
 
-              {/* Sidebar links */}
-              <Box
-                bg="var(--bg-surface)"
-                border="1px solid"
-                borderColor="var(--border)"
-                borderRadius="xl"
-                p={5}
-              >
-                <Text
-                  fontSize="xs"
-                  fontWeight="600"
-                  color="var(--accent)"
-                  textTransform="uppercase"
-                  letterSpacing="0.05em"
-                  mb={3}
-                >
-                  Related
-                </Text>
-
-                <VStack spacing={2} align="stretch">
-                  {deployment?.vestingVault && (
-                    <Link
-                      as={NextLink}
-                      href={`/vesting/${deployment.vestingVault}`}
-                      px={3}
-                      py={2}
-                      rounded="lg"
-                      fontSize="sm"
-                      color="var(--text-secondary)"
-                      bg="var(--bg-elevated)"
-                      _hover={{
-                        textDecoration: "none",
-                        color: "var(--text-primary)",
-                        borderColor: "var(--border-hover)",
-                      }}
-                      display="block"
-                    >
-                      Vesting Schedules
-                    </Link>
-                  )}
-
-                  {deployment?.liquidityLocker && (
-                    <Link
-                      as={NextLink}
-                      href={`/locker/${deployment.liquidityLocker}`}
-                      px={3}
-                      py={2}
-                      rounded="lg"
-                      fontSize="sm"
-                      color="var(--text-secondary)"
-                      bg="var(--bg-elevated)"
-                      _hover={{
-                        textDecoration: "none",
-                        color: "var(--text-primary)",
-                        borderColor: "var(--border-hover)",
-                      }}
-                      display="block"
-                    >
-                      Liquidity Locker
-                    </Link>
-                  )}
-                </VStack>
-              </Box>
+              <CurveProgress curveState={curveState} loading={false} />
             </VStack>
           </GridItem>
         </Grid>
