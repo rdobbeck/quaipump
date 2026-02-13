@@ -50,6 +50,7 @@ export function TradePanel({
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [poolSwapping, setPoolSwapping] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [customSlippage, setCustomSlippage] = useState("");
   const [chunkProgress, setChunkProgress] = useState<{
     current: number;
     total: number;
@@ -81,7 +82,7 @@ export function TradePanel({
         if (graduated && poolAddress) {
           // Use pool's getAmountOut
           const quais = await import("quais");
-          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
           const pool = new quais.Contract(poolAddress, GraduatedPoolABI, provider);
           const amountIn = mode === "buy"
             ? quais.parseQuai(amount)
@@ -217,7 +218,7 @@ export function TradePanel({
       const quaiAmount = quais.parseQuai(buyAmount);
 
       // Get quote for min out
-      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const readPool = new quais.Contract(poolAddress, GraduatedPoolABI, readProvider);
       const expectedOut: bigint = await readPool.getAmountOut(quaiAmount, true);
       const slippageBps = BigInt(Math.floor(slippage * 100));
@@ -285,7 +286,7 @@ export function TradePanel({
       }
 
       // Get quote for min out
-      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const readProvider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const readPool = new quais.Contract(poolAddress, GraduatedPoolABI, readProvider);
       const expectedOut: bigint = await readPool.getAmountOut(tokenAmount, false);
       const slippageBps = BigInt(Math.floor(slippage * 100));
@@ -598,7 +599,7 @@ export function TradePanel({
         <Text fontSize="10px" color="var(--text-tertiary)">
           Slippage
         </Text>
-        <Flex gap={1}>
+        <Flex gap={1} align="center">
           {SLIPPAGE_OPTIONS.map((s) => (
             <Button
               key={s}
@@ -608,18 +609,47 @@ export function TradePanel({
               h="22px"
               fontSize="10px"
               fontFamily="mono"
-              bg={slippage === s ? "var(--accent)" : "var(--bg-elevated)"}
-              color={slippage === s ? "#0b0b0f" : "var(--text-tertiary)"}
+              bg={slippage === s && !customSlippage ? "var(--accent)" : "var(--bg-elevated)"}
+              color={slippage === s && !customSlippage ? "#0b0b0f" : "var(--text-tertiary)"}
               border="1px solid"
               borderColor={
-                slippage === s ? "var(--accent)" : "var(--border)"
+                slippage === s && !customSlippage ? "var(--accent)" : "var(--border)"
               }
               _hover={{ borderColor: "var(--accent)" }}
-              onClick={() => setSlippage(s)}
+              onClick={() => {
+                setSlippage(s);
+                setCustomSlippage("");
+              }}
             >
               {s}%
             </Button>
           ))}
+          <Input
+            value={customSlippage}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 50)) {
+                setCustomSlippage(val);
+                const num = parseFloat(val);
+                if (num > 0 && num <= 50) setSlippage(num);
+              }
+            }}
+            placeholder="Custom"
+            w="58px"
+            h="22px"
+            px={1.5}
+            fontSize="10px"
+            fontFamily="mono"
+            textAlign="center"
+            bg={customSlippage ? "var(--accent)" : "var(--bg-elevated)"}
+            color={customSlippage ? "#0b0b0f" : "var(--text-tertiary)"}
+            border="1px solid"
+            borderColor={customSlippage ? "var(--accent)" : "var(--border)"}
+            rounded="md"
+            _hover={{ borderColor: "var(--accent)" }}
+            _focus={{ borderColor: "var(--accent)", boxShadow: "none" }}
+            _placeholder={{ color: "var(--text-tertiary)" }}
+          />
         </Flex>
       </Flex>
 

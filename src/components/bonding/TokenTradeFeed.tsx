@@ -38,7 +38,7 @@ export function TokenTradeFeed({
   const fetchTrades = useCallback(async () => {
     try {
       const quais = await import("quais");
-      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const currentBlock = await provider.getBlockNumber(quais.Shard.Cyprus1);
       const fromBlock = Math.max(0, currentBlock - LOOKBACK_BLOCKS);
 

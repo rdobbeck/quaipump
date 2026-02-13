@@ -65,7 +65,7 @@ export function useBondingCurve() {
     const quais = await import("quais");
     return (
       (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-      new quais.JsonRpcProvider(NETWORK.rpcUrl)
+      new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false })
     );
   }, [rpcProvider]);
 

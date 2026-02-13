@@ -35,7 +35,7 @@ export function TokenHolders({
   const fetchHolders = useCallback(async () => {
     try {
       const quais = await import("quais");
-      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const tokenContract = new quais.Contract(tokenAddress, BondingCurveTokenABI, provider);
 
       // Query Transfer events to find unique addresses

@@ -62,7 +62,7 @@ export function useTokenomicsFactory() {
     const quais = await import("quais");
     const provider =
       (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-      new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+      new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
     const contract = new quais.Contract(
       FACTORY_ADDRESS,
       TokenomicsFactoryABI,
@@ -77,7 +77,7 @@ export function useTokenomicsFactory() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(
         FACTORY_ADDRESS,
         TokenomicsFactoryABI,

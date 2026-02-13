@@ -37,7 +37,7 @@ export function TokenomicsStatus({
   const fetchTokenomics = useCallback(async () => {
     try {
       const quais = await import("quais");
-      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+      const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(
         tokenAddress,
         BondingCurveTokenV2ABI,

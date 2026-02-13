@@ -66,7 +66,7 @@ export function useLaunchData(): UseLaunchDataReturn {
 
         // Fetch pool reserves for graduated tokens
         const quais = await import("quais");
-        const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+        const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
         const reserves: Record<string, { quai: string; token: string }> = {};
         await Promise.all(
           reversed.map(async (l) => {

@@ -79,7 +79,7 @@ export default function CreatorProfilePage() {
           if (curveState.graduated && curveState.pool) {
             try {
               const quais = await import("quais");
-              const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+              const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
               const pool = new quais.Contract(curveState.pool, GraduatedPoolABI, provider);
               const [rQuai, rToken] = await Promise.all([
                 pool.reserveQuai(),

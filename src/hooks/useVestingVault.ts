@@ -21,7 +21,7 @@ export function useVestingVault() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(vaultAddress, VestingVaultABI, provider);
       return contract.token();
     },
@@ -37,7 +37,7 @@ export function useVestingVault() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(vaultAddress, VestingVaultABI, provider);
       const p = await contract.getPosition(beneficiary);
       return {
@@ -56,7 +56,7 @@ export function useVestingVault() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(vaultAddress, VestingVaultABI, provider);
       const amount = await contract.releasable(beneficiary);
       return quais.formatUnits(amount, decimals);
@@ -69,7 +69,7 @@ export function useVestingVault() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(vaultAddress, VestingVaultABI, provider);
       const amount = await contract.vested(beneficiary);
       return quais.formatUnits(amount, decimals);
@@ -95,7 +95,7 @@ export function useVestingVault() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(vaultAddress, VestingVaultABI, provider);
       return contract.getBeneficiaries();
     },

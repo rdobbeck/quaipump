@@ -2,7 +2,7 @@ export const NETWORKS = {
   orchard: {
     name: "Quai Orchard Testnet",
     chainId: 15000,
-    rpcUrl: "https://orchard.rpc.quai.network",
+    rpcUrl: "https://orchard.rpc.quai.network/cyprus1",
     explorerUrl: "https://orchard.quaiscan.io",
   },
   mainnet: {

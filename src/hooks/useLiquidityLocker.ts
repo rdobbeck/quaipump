@@ -20,7 +20,7 @@ export function useLiquidityLocker() {
       const quais = await import("quais");
       const provider =
         (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+        new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
       const contract = new quais.Contract(
         lockerAddress,
         LiquidityLockerABI,

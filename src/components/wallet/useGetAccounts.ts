@@ -16,7 +16,7 @@ export function useGetAccounts() {
       const web3Provider = new quaisLib.BrowserProvider(
         window.pelagus as unknown as import("quais").Eip1193Provider
       );
-      const rpcProvider = new quaisLib.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true });
+      const rpcProvider = new quaisLib.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
 
       dispatch({ type: "SET_ACCOUNT", payload: accounts[0] });
       dispatch({ type: "SET_WEB3_PROVIDER", payload: web3Provider });

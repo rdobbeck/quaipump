@@ -80,7 +80,7 @@ export function SwapPanel({
     const quais = await import("quais");
     return (
       (rpcProvider as InstanceType<typeof quais.JsonRpcProvider>) ||
-      new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: true })
+      new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false })
     );
   }, [rpcProvider]);
 

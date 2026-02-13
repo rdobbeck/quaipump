@@ -95,7 +95,7 @@ export default function PortfolioPage() {
           if (state.graduated && state.pool) {
             try {
               const quais = await import("quais");
-              const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+              const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
               const pool = new quais.Contract(state.pool, GraduatedPoolABI, provider);
               const [rQuai, rToken] = await Promise.all([
                 pool.reserveQuai(),

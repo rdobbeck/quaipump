@@ -33,6 +33,7 @@ import { TokenComments } from "@/components/bonding/TokenComments";
 import { TokenTradeFeed } from "@/components/bonding/TokenTradeFeed";
 import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
 import { TokenHolders } from "@/components/bonding/TokenHolders";
+import { UserTradeHistory } from "@/components/bonding/UserTradeHistory";
 import { useFavorites } from "@/hooks/useFavorites";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
@@ -69,7 +70,7 @@ export default function TokenDetailPage() {
       if (state.graduated && state.pool) {
         try {
           const quais = await import("quais");
-          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
           const poolContract = new quais.Contract(
             state.pool,
             GraduatedPoolABI,
@@ -117,7 +118,7 @@ export default function TokenDetailPage() {
       // Detect V2 token (has tokenomics)
       try {
         const quais = await import("quais");
-        const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+        const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
         const tokenContract = new quais.Contract(
           found.tokenAddress,
           BondingCurveTokenV2ABI,
@@ -135,7 +136,7 @@ export default function TokenDetailPage() {
       if (state.graduated && state.pool) {
         try {
           const quais = await import("quais");
-          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl);
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
           const poolContract = new quais.Contract(
             state.pool,
             GraduatedPoolABI,
@@ -563,6 +564,13 @@ export default function TokenDetailPage() {
               />
 
               <TokenTradeFeed
+                curveAddress={launch.curveAddress}
+                tokenSymbol={launch.symbol}
+                graduated={graduated}
+                poolAddress={curveState?.pool}
+              />
+
+              <UserTradeHistory
                 curveAddress={launch.curveAddress}
                 tokenSymbol={launch.symbol}
                 graduated={graduated}
