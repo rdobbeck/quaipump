@@ -1,35 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box, Container } from "@chakra-ui/react";
-import { useBondingCurve, type LaunchInfo } from "@/hooks/useBondingCurve";
-import { BondingTokenList } from "@/components/bonding/BondingTokenList";
+import { Box, Container, Text } from "@chakra-ui/react";
+import { useLaunchData } from "@/hooks/useLaunchData";
 import { LiveTradeFeed } from "@/components/bonding/LiveTradeFeed";
-import { BONDING_FACTORY_ADDRESS } from "@/lib/constants";
+import { BondingTokenList } from "@/components/bonding/BondingTokenList";
+import { PlatformStats } from "@/components/browse/PlatformStats";
+import { FeaturedSections } from "@/components/browse/FeaturedSections";
 
 export default function HomePage() {
-  const { getAllLaunches } = useBondingCurve();
-  const [launches, setLaunches] = useState<LaunchInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!BONDING_FACTORY_ADDRESS) {
-      setLoading(false);
-      return;
-    }
-    getAllLaunches()
-      .then((data) => {
-        setLaunches([...data].reverse());
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [getAllLaunches]);
+  const {
+    launches,
+    curveStates,
+    poolReservesMap,
+    loading,
+    statesLoaded,
+    stats,
+    aboutToGraduate,
+    recentlyLaunched,
+    topMarketCap,
+  } = useLaunchData();
 
   return (
     <Box minH="calc(100vh - 120px)">
       <Container maxW="container.xl" py={6}>
         <LiveTradeFeed launches={launches} />
-        <BondingTokenList launches={launches} loading={loading} />
+
+        <PlatformStats
+          totalLaunches={stats.totalLaunches}
+          graduatedCount={stats.graduatedCount}
+          totalQuaiLocked={stats.totalQuaiLocked}
+          totalQuaiLockedUsd={stats.totalQuaiLockedUsd}
+          loading={loading || !statesLoaded}
+        />
+
+        {statesLoaded && (
+          <FeaturedSections
+            aboutToGraduate={aboutToGraduate}
+            recentlyLaunched={recentlyLaunched}
+            topMarketCap={topMarketCap}
+            curveStates={curveStates}
+            poolReservesMap={poolReservesMap}
+          />
+        )}
+
+        <Text fontSize="lg" fontWeight="700" color="var(--text-primary)" mb={4}>
+          All Tokens
+        </Text>
+
+        <BondingTokenList
+          launches={launches}
+          loading={loading}
+          curveStates={statesLoaded ? curveStates : undefined}
+          poolReservesMap={statesLoaded ? poolReservesMap : undefined}
+        />
       </Container>
     </Box>
   );

@@ -17,7 +17,7 @@ import { ConnectButton } from "@/components/wallet/ConnectButton";
 import { WQI_ENABLED } from "@/lib/constants";
 
 const BASE_NAV_LINKS = [
-  { label: "Browse", href: "/browse" },
+  { label: "Browse", href: "/" },
   { label: "Create", href: "/create" },
 ];
 
@@ -78,8 +78,8 @@ export function Navbar() {
             <HStack spacing={1} display={{ base: "none", md: "flex" }}>
               {navLinks.map((link) => {
                 const isActive =
-                  link.href === "/browse"
-                    ? pathname === "/" || pathname === "/browse"
+                  link.href === "/"
+                    ? pathname === "/"
                     : pathname.startsWith(link.href);
                 return (
                   <Link
