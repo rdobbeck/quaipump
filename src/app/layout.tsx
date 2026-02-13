@@ -6,9 +6,9 @@ import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tokenomics Factory — Deploy Custom Tokens on Quai",
+  title: "QuaiPump — Launch Tokens on Quai",
   description:
-    "Create and deploy ERC20 tokens with taxes, vesting, LP locking, and reflection on Quai Network.",
+    "Launch bonding curve tokens on Quai Network. Auto-graduation to DEX, instant trading, no presale.",
 };
 
 export default function RootLayout({

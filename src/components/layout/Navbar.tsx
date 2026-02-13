@@ -18,6 +18,7 @@ import { WQI_ENABLED } from "@/lib/constants";
 
 const BASE_NAV_LINKS = [
   { label: "Browse", href: "/" },
+  { label: "Launch", href: "/launch" },
   { label: "Create", href: "/create" },
 ];
 
@@ -71,7 +72,7 @@ export function Navbar() {
                 color="var(--accent)"
                 letterSpacing="-0.5px"
               >
-                Tokenomics Factory
+                QuaiPump
               </Text>
             </Link>
 
