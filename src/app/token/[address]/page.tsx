@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
+import NextLink from "next/link";
 import {
   Container,
   Grid,
@@ -378,12 +379,12 @@ export default function TokenDetailPage() {
                   by
                 </Text>
                 <Link
-                  href={getExplorerAddressUrl(launch.creator)}
-                  isExternal
+                  as={NextLink}
+                  href={`/creator/${launch.creator}`}
                   fontSize="xs"
                   fontFamily="mono"
                   color="var(--text-secondary)"
-                  _hover={{ color: "var(--accent)" }}
+                  _hover={{ color: "var(--accent)", textDecoration: "none" }}
                 >
                   {shortenAddress(launch.creator)}
                 </Link>
