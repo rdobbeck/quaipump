@@ -32,6 +32,7 @@ import { CurveProgress } from "@/components/bonding/CurveProgress";
 import { TokenComments } from "@/components/bonding/TokenComments";
 import { TokenTradeFeed } from "@/components/bonding/TokenTradeFeed";
 import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
+import { TokenHolders } from "@/components/bonding/TokenHolders";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
 export default function TokenDetailPage() {
@@ -531,6 +532,13 @@ export default function TokenDetailPage() {
                 tokenSymbol={launch.symbol}
                 graduated={graduated}
                 poolAddress={curveState?.pool}
+              />
+
+              <TokenHolders
+                tokenAddress={launch.tokenAddress}
+                curveAddress={launch.curveAddress}
+                poolAddress={curveState?.pool}
+                tokenSymbol={launch.symbol}
               />
 
               <TokenComments tokenAddress={launch.curveAddress} />
