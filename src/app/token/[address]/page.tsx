@@ -24,6 +24,7 @@ import { TokenStats } from "@/components/dashboard/TokenStats";
 import { HolderInfo } from "@/components/dashboard/HolderInfo";
 import { OwnerPanel } from "@/components/owner/OwnerPanel";
 import { SwapPanel } from "@/components/trade/SwapPanel";
+import { TokenComments } from "@/components/bonding/TokenComments";
 
 export default function TokenDashboardPage() {
   const params = useParams<{ address: string }>();
@@ -148,6 +149,8 @@ export default function TokenDashboardPage() {
                 tokenAddress={tokenInfo.address}
                 tokenInfo={tokenInfo}
               />
+
+              <TokenComments tokenAddress={tokenInfo.address} />
             </VStack>
           </GridItem>
 
