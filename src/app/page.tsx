@@ -23,7 +23,7 @@ export default function HomePage() {
   return (
     <Box minH="calc(100vh - 120px)">
       <Container maxW="container.xl" py={6}>
-        <LiveTradeFeed launches={launches} />
+        <LiveTradeFeed launches={launches} curveStates={statesLoaded ? curveStates : undefined} />
 
         <PlatformStats
           totalLaunches={stats.totalLaunches}
