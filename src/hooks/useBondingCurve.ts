@@ -25,6 +25,7 @@ export interface LaunchInfo {
   twitter: string;
   telegram: string;
   createdAt: number;
+  stakedAmount: string;
 }
 
 export interface CurveState {
@@ -358,6 +359,7 @@ export function useBondingCurve() {
 
     const results = await contract.getLaunchesPaginated(0, total);
 
+    const quaisModule = quais;
     return results.map((info: Record<string, unknown>, i: number) => ({
       launchId: i,
       tokenAddress: info.tokenAddress as string,
@@ -371,6 +373,7 @@ export function useBondingCurve() {
       twitter: info.twitter as string,
       telegram: info.telegram as string,
       createdAt: Number(info.createdAt),
+      stakedAmount: quaisModule.formatQuai(info.stakedAmount as bigint ?? 0n),
     }));
   }, [getReadProvider]);
 
@@ -401,6 +404,7 @@ export function useBondingCurve() {
         twitter: info.twitter,
         telegram: info.telegram,
         createdAt: Number(info.createdAt),
+        stakedAmount: quais.formatQuai(info.stakedAmount ?? 0n),
       });
     }
 

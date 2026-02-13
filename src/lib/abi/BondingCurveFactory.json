@@ -1,9 +1,17 @@
 [
   "function creationFee() view returns (uint256)",
-  "function launchToken(string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram) payable returns (address, address)",
+  "function stakedCreatorFeeBps() view returns (uint256)",
+  "function stakeUnlockTimeout() view returns (uint256)",
+  "function launchStake(uint256) view returns (uint256)",
+  "function stakeClaimed(uint256) view returns (bool)",
+  "function launchToken(string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram) payable returns (uint256, address, address)",
+  "function claimStake(uint256 launchId)",
+  "function getCreatorFeeBpsForLaunch(address curveAddress) view returns (uint256)",
   "function getTotalLaunches() view returns (uint256)",
-  "function getLaunchesPaginated(uint256 offset, uint256 limit) view returns (tuple(address tokenAddress, address curveAddress, address creator, string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram, uint256 createdAt)[])",
-  "function getLaunchInfo(uint256 launchId) view returns (tuple(address tokenAddress, address curveAddress, address creator, string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram, uint256 createdAt))",
+  "function getLaunchesPaginated(uint256 offset, uint256 limit) view returns (tuple(address tokenAddress, address curveAddress, address creator, string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram, uint256 createdAt, uint256 stakedAmount)[])",
+  "function getLaunchInfo(uint256 launchId) view returns (tuple(address tokenAddress, address curveAddress, address creator, string name, string symbol, string description, string imageUrl, string website, string twitter, string telegram, uint256 createdAt, uint256 stakedAmount))",
   "function getLaunchesByCreator(address creator) view returns (uint256[])",
-  "event TokenLaunched(address indexed tokenAddress, address indexed curveAddress, address indexed creator, string name, string symbol)"
+  "event TokenLaunched(uint256 indexed launchId, address indexed creator, address tokenAddress, address curveAddress, string name, string symbol, string description, string imageUrl)",
+  "event CreatorStaked(uint256 indexed launchId, address indexed creator, uint256 amount)",
+  "event StakeClaimed(uint256 indexed launchId, address indexed creator, uint256 amount)"
 ]

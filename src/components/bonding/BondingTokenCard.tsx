@@ -143,6 +143,19 @@ export function BondingTokenCard({ launch, curveState: externalState, poolReserv
                 >
                   ${launch.symbol}
                 </Box>
+                {parseFloat(launch.stakedAmount || "0") > 0 && (
+                  <Box
+                    bg="rgba(0,230,118,0.12)"
+                    color="var(--accent)"
+                    px={1.5}
+                    py={0}
+                    rounded="md"
+                    fontSize="10px"
+                    fontWeight="600"
+                  >
+                    STAKED {launch.stakedAmount} QUAI
+                  </Box>
+                )}
                 <Text fontSize="10px" color="var(--text-tertiary)">
                   {timeAgo(launch.createdAt)}
                 </Text>
