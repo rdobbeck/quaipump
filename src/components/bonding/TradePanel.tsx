@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Box, Flex, Text, Input, Button, useToast } from "@chakra-ui/react";
+import { Box, Flex, Text, Input, Button, useToast, useDisclosure } from "@chakra-ui/react";
+import { TradeConfirmModal } from "@/components/bonding/TradeConfirmModal";
 import { useBondingCurve } from "@/hooks/useBondingCurve";
 import { useAppState } from "@/app/store";
 import { NETWORK, QUAI_USD_PRICE } from "@/lib/constants";
@@ -51,6 +52,7 @@ export function TradePanel({
   const [poolSwapping, setPoolSwapping] = useState(false);
   const [approving, setApproving] = useState(false);
   const [customSlippage, setCustomSlippage] = useState("");
+  const confirmModal = useDisclosure();
   const [chunkProgress, setChunkProgress] = useState<{
     current: number;
     total: number;
@@ -343,11 +345,12 @@ export function TradePanel({
   const connected = !!account;
   const canTradeGraduated = graduated && !!poolAddress;
 
-  const handleAction = () => {
+  const executeAction = () => {
+    confirmModal.onClose();
     if (canTradeGraduated) {
-      mode === "buy" ? handlePoolBuy() : handlePoolSell();
+      if (mode === "buy") { handlePoolBuy(); } else { handlePoolSell(); }
     } else {
-      mode === "buy" ? handleBuy() : handleSell();
+      if (mode === "buy") { handleBuy(); } else { handleSell(); }
     }
   };
 
@@ -588,7 +591,7 @@ export function TradePanel({
           isLoading={isProcessing}
           loadingText={getLoadingText()}
           isDisabled={!amount || parseFloat(amount) <= 0}
-          onClick={handleAction}
+          onClick={quote ? confirmModal.onOpen : executeAction}
         >
           {getButtonText()}
         </Button>
@@ -678,6 +681,20 @@ export function TradePanel({
           </Text>
         </Flex>
       )}
+
+      {/* Confirmation Modal */}
+      <TradeConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={confirmModal.onClose}
+        onConfirm={executeAction}
+        mode={mode}
+        amount={amount}
+        quote={quote}
+        tokenSymbol={tokenSymbol}
+        slippage={slippage}
+        graduated={canTradeGraduated}
+        isLoading={isProcessing}
+      />
     </Box>
   );
 }

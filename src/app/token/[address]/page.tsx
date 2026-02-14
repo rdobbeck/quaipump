@@ -34,7 +34,9 @@ import { TokenTradeFeed } from "@/components/bonding/TokenTradeFeed";
 import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
 import { TokenHolders } from "@/components/bonding/TokenHolders";
 import { UserTradeHistory } from "@/components/bonding/UserTradeHistory";
+import { PriceAlertButton } from "@/components/bonding/PriceAlertButton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useReferral } from "@/hooks/useReferral";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
 
 export default function TokenDetailPage() {
@@ -43,6 +45,7 @@ export default function TokenDetailPage() {
 
   const toast = useToast();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { getReferralLink } = useReferral();
   const { getAllLaunches, getCurveState } = useBondingCurve();
 
   const [launch, setLaunch] = useState<LaunchInfo | null>(null);
@@ -526,6 +529,34 @@ export default function TokenDetailPage() {
               >
                 Share
               </Link>
+              <PriceAlertButton
+                curveAddress={launch.curveAddress}
+                tokenSymbol={launch.symbol}
+                currentPriceUsd={priceUsd}
+              />
+              <Box
+                as="button"
+                fontSize="10px"
+                color="var(--text-secondary)"
+                bg="var(--bg-elevated)"
+                px={2}
+                py={1}
+                rounded="md"
+                cursor="pointer"
+                _hover={{ color: "var(--accent)" }}
+                onClick={() => {
+                  const refLink = getReferralLink("", `/token/${launch.curveAddress}`);
+                  navigator.clipboard.writeText(refLink);
+                  toast({
+                    title: "Referral link copied",
+                    status: "success",
+                    duration: 2000,
+                    position: "bottom-right",
+                  });
+                }}
+              >
+                Refer
+              </Box>
             </Flex>
           </Flex>
 
