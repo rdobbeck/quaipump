@@ -57,6 +57,8 @@ export function Navbar() {
     setMenuOpen(false);
   }, [pathname]);
 
+  if (pathname.startsWith("/embed")) return null;
+
   return (
     <Box
       bg="var(--bg-surface)"

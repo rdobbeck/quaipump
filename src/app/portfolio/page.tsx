@@ -19,8 +19,9 @@ import {
   type CurveState,
 } from "@/hooks/useBondingCurve";
 import { useAppState } from "@/app/store";
-import { NETWORK, QUAI_USD_PRICE, BONDING_TOTAL_SUPPLY } from "@/lib/constants";
+import { NETWORK, QUAI_USD_PRICE } from "@/lib/constants";
 import GraduatedPoolABI from "@/lib/abi/GraduatedPool.json";
+import BondingCurveABI from "@/lib/abi/BondingCurve.json";
 
 interface Holding {
   launch: LaunchInfo;
@@ -28,6 +29,10 @@ interface Holding {
   priceUsd: number;
   valueUsd: number;
   graduated: boolean;
+  costBasisQuai: number;
+  costBasisUsd: number;
+  pnlUsd: number;
+  pnlPercent: number;
 }
 
 export default function PortfolioPage() {
@@ -118,7 +123,25 @@ export default function PortfolioPage() {
         const valueUsd = priceUsd * balance;
         total += valueUsd;
 
-        holdingsList.push({ launch, balance, priceUsd, valueUsd, graduated });
+        // Estimate cost basis from buy events
+        let costBasisQuai = 0;
+        try {
+          const quais = await import("quais");
+          const provider = new quais.JsonRpcProvider(NETWORK.rpcUrl, undefined, { usePathing: false });
+          const curve = new quais.Contract(launch.curveAddress, BondingCurveABI, provider);
+          const currentBlock = await provider.getBlockNumber(quais.Shard.Cyprus1);
+          const buyFilter = curve.filters.TokensPurchased(account);
+          const buyEvents = await curve.queryFilter(buyFilter, Math.max(0, currentBlock - 10000), currentBlock);
+          for (const ev of buyEvents) {
+            const log = ev as unknown as { args: [string, bigint, bigint, bigint] };
+            costBasisQuai += parseFloat(quais.formatQuai(log.args[1]));
+          }
+        } catch {}
+        const costBasisUsd = costBasisQuai * QUAI_USD_PRICE;
+        const pnlUsd = valueUsd - costBasisUsd;
+        const pnlPercent = costBasisUsd > 0 ? ((valueUsd - costBasisUsd) / costBasisUsd) * 100 : 0;
+
+        holdingsList.push({ launch, balance, priceUsd, valueUsd, graduated, costBasisQuai, costBasisUsd, pnlUsd, pnlPercent });
       }
 
       // Sort by value descending
@@ -187,30 +210,52 @@ export default function PortfolioPage() {
           <Text fontSize="lg" fontWeight="700" color="var(--text-primary)">
             Portfolio
           </Text>
-          {!loading && holdings.length > 0 && (
-            <Flex align="center" gap={3}>
-              <Box
-                bg="var(--bg-surface)"
-                border="1px solid"
-                borderColor="var(--border)"
-                rounded="lg"
-                px={4}
-                py={2}
-              >
-                <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
-                  Total Value
-                </Text>
-                <Text
-                  fontSize="md"
-                  fontWeight="700"
-                  fontFamily="mono"
-                  color="var(--accent)"
+          {!loading && holdings.length > 0 && (() => {
+            const totalCost = holdings.reduce((s, h) => s + h.costBasisUsd, 0);
+            const totalPnl = totalValue - totalCost;
+            const totalPnlPct = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
+            return (
+              <Flex align="center" gap={3}>
+                <Box
+                  bg="var(--bg-surface)"
+                  border="1px solid"
+                  borderColor="var(--border)"
+                  rounded="lg"
+                  px={4}
+                  py={2}
                 >
-                  ${totalValue.toFixed(2)}
-                </Text>
-              </Box>
-            </Flex>
-          )}
+                  <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
+                    Total Value
+                  </Text>
+                  <Text fontSize="md" fontWeight="700" fontFamily="mono" color="var(--accent)">
+                    ${totalValue.toFixed(2)}
+                  </Text>
+                </Box>
+                {totalCost > 0 && (
+                  <Box
+                    bg="var(--bg-surface)"
+                    border="1px solid"
+                    borderColor="var(--border)"
+                    rounded="lg"
+                    px={4}
+                    py={2}
+                  >
+                    <Text fontSize="10px" color="var(--text-tertiary)" mb={0.5}>
+                      Total PnL
+                    </Text>
+                    <Text
+                      fontSize="md"
+                      fontWeight="700"
+                      fontFamily="mono"
+                      color={totalPnl >= 0 ? "var(--accent)" : "var(--sell)"}
+                    >
+                      {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)} ({totalPnlPct >= 0 ? "+" : ""}{totalPnlPct.toFixed(1)}%)
+                    </Text>
+                  </Box>
+                )}
+              </Flex>
+            );
+          })()}
         </Flex>
 
         {/* Sort & Search controls */}
@@ -300,9 +345,10 @@ export default function PortfolioPage() {
               borderColor="var(--border)"
             >
               <Text flex={1}>Token</Text>
-              <Text flex="0 0 120px" textAlign="right">Balance</Text>
-              <Text flex="0 0 100px" textAlign="right">Price</Text>
-              <Text flex="0 0 100px" textAlign="right">Value</Text>
+              <Text flex="0 0 100px" textAlign="right">Balance</Text>
+              <Text flex="0 0 90px" textAlign="right">Price</Text>
+              <Text flex="0 0 90px" textAlign="right">Value</Text>
+              <Text flex="0 0 100px" textAlign="right" display={{ base: "none", md: "block" }}>PnL</Text>
             </Flex>
 
             {/* Rows */}
@@ -408,7 +454,7 @@ export default function PortfolioPage() {
 
                   {/* Balance */}
                   <Text
-                    flex="0 0 120px"
+                    flex="0 0 100px"
                     textAlign="right"
                     fontFamily="mono"
                     fontSize="sm"
@@ -419,7 +465,7 @@ export default function PortfolioPage() {
 
                   {/* Price */}
                   <Text
-                    flex="0 0 100px"
+                    flex="0 0 90px"
                     textAlign="right"
                     fontFamily="mono"
                     fontSize="xs"
@@ -430,7 +476,7 @@ export default function PortfolioPage() {
 
                   {/* Value */}
                   <Text
-                    flex="0 0 100px"
+                    flex="0 0 90px"
                     textAlign="right"
                     fontFamily="mono"
                     fontSize="sm"
@@ -439,6 +485,35 @@ export default function PortfolioPage() {
                   >
                     ${h.valueUsd.toFixed(2)}
                   </Text>
+
+                  {/* PnL */}
+                  <Box
+                    flex="0 0 100px"
+                    textAlign="right"
+                    display={{ base: "none", md: "block" }}
+                  >
+                    {h.costBasisUsd > 0 ? (
+                      <>
+                        <Text
+                          fontFamily="mono"
+                          fontSize="xs"
+                          fontWeight="600"
+                          color={h.pnlUsd >= 0 ? "var(--accent)" : "var(--sell)"}
+                        >
+                          {h.pnlUsd >= 0 ? "+" : ""}{h.pnlUsd.toFixed(2)}
+                        </Text>
+                        <Text
+                          fontFamily="mono"
+                          fontSize="10px"
+                          color={h.pnlPercent >= 0 ? "var(--accent)" : "var(--sell)"}
+                        >
+                          {h.pnlPercent >= 0 ? "+" : ""}{h.pnlPercent.toFixed(1)}%
+                        </Text>
+                      </>
+                    ) : (
+                      <Text fontSize="10px" color="var(--text-tertiary)">--</Text>
+                    )}
+                  </Box>
                 </Flex>
               </Link>
             ))}

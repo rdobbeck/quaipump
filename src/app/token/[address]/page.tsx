@@ -35,6 +35,7 @@ import { TokenomicsStatus } from "@/components/bonding/TokenomicsStatus";
 import { TokenHolders } from "@/components/bonding/TokenHolders";
 import { UserTradeHistory } from "@/components/bonding/UserTradeHistory";
 import { PriceAlertButton } from "@/components/bonding/PriceAlertButton";
+import { TokenAnalytics } from "@/components/bonding/TokenAnalytics";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useReferral } from "@/hooks/useReferral";
 import BondingCurveTokenV2ABI from "@/lib/abi/BondingCurveTokenV2.json";
@@ -557,6 +558,30 @@ export default function TokenDetailPage() {
               >
                 Refer
               </Box>
+              <Box
+                as="button"
+                fontSize="10px"
+                color="var(--text-secondary)"
+                bg="var(--bg-elevated)"
+                px={2}
+                py={1}
+                rounded="md"
+                cursor="pointer"
+                _hover={{ color: "var(--accent)" }}
+                onClick={() => {
+                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const embedCode = `<iframe src="${origin}/embed/${launch.curveAddress}" width="400" height="200" frameborder="0" style="border-radius:12px;"></iframe>`;
+                  navigator.clipboard.writeText(embedCode);
+                  toast({
+                    title: "Embed code copied",
+                    status: "success",
+                    duration: 2000,
+                    position: "bottom-right",
+                  });
+                }}
+              >
+                Embed
+              </Box>
             </Flex>
           </Flex>
 
@@ -602,6 +627,13 @@ export default function TokenDetailPage() {
               />
 
               <UserTradeHistory
+                curveAddress={launch.curveAddress}
+                tokenSymbol={launch.symbol}
+                graduated={graduated}
+                poolAddress={curveState?.pool}
+              />
+
+              <TokenAnalytics
                 curveAddress={launch.curveAddress}
                 tokenSymbol={launch.symbol}
                 graduated={graduated}

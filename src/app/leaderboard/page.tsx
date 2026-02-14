@@ -16,7 +16,7 @@ import { useLaunchData } from "@/hooks/useLaunchData";
 import { QUAI_USD_PRICE, BONDING_TOTAL_SUPPLY } from "@/lib/constants";
 import { timeAgo } from "@/lib/time";
 
-type SortMetric = "mcap" | "liquidity" | "progress" | "newest";
+type SortMetric = "mcap" | "liquidity" | "progress" | "newest" | "trending" | "hot";
 
 export default function LeaderboardPage() {
   const { launches, curveStates, poolReservesMap, loading, statesLoaded } =
@@ -65,6 +65,25 @@ export default function LeaderboardPage() {
         });
       case "newest":
         return sorted.sort((a, b) => b.createdAt - a.createdAt);
+      case "trending":
+        // Tokens with most liquidity relative to age (newer + more liquid = higher)
+        return sorted.sort((a, b) => {
+          const now = Math.floor(Date.now() / 1000);
+          const ageA = Math.max(1, (now - a.createdAt) / 3600); // hours
+          const ageB = Math.max(1, (now - b.createdAt) / 3600);
+          const scoreA = getLiquidity(a.curveAddress) / ageA;
+          const scoreB = getLiquidity(b.curveAddress) / ageB;
+          return scoreB - scoreA;
+        });
+      case "hot":
+        // Biggest price (mcap) relative to liquidity = high price momentum
+        return sorted.sort((a, b) => {
+          const liqA = getLiquidity(a.curveAddress) || 0.001;
+          const liqB = getLiquidity(b.curveAddress) || 0.001;
+          const ratioA = getMcap(a.curveAddress) / liqA;
+          const ratioB = getMcap(b.curveAddress) / liqB;
+          return ratioB - ratioA;
+        });
       default:
         return sorted;
     }
@@ -73,6 +92,8 @@ export default function LeaderboardPage() {
 
   const metrics: { value: SortMetric; label: string }[] = [
     { value: "mcap", label: "Market Cap" },
+    { value: "trending", label: "Trending" },
+    { value: "hot", label: "Hot" },
     { value: "liquidity", label: "Liquidity" },
     { value: "progress", label: "Progress" },
     { value: "newest", label: "Newest" },

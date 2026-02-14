@@ -3,6 +3,7 @@ import { ColorModeScript } from "@chakra-ui/react";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,8 +23,9 @@ export default function RootLayout({
         <ColorModeScript initialColorMode="dark" />
         <Providers>
           <Navbar />
-          <main style={{ minHeight: "calc(100vh - 100px)" }}>{children}</main>
+          <main style={{ minHeight: "calc(100vh - 100px)", paddingBottom: "64px" }}>{children}</main>
           <Footer />
+          <MobileTabBar />
         </Providers>
       </body>
     </html>
