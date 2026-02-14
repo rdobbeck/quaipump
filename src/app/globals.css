@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #0b0b0f;
   --bg-surface: #13131a;
   --bg-elevated: #1a1a24;
@@ -17,6 +18,23 @@
   --progress-bg: #1e1e2a;
 }
 
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f0f3;
+  --border: #d8d8e0;
+  --border-hover: #c0c0cc;
+  --accent: #00b85c;
+  --accent-hover: #009e4f;
+  --accent-glow: rgba(0, 184, 92, 0.12);
+  --sell: #e53935;
+  --sell-hover: #c62828;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6b6b80;
+  --text-tertiary: #9a9ab0;
+  --progress-bg: #e8e8f0;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -28,6 +46,7 @@ body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .mono {
@@ -95,3 +114,19 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+select option {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .skeleton-shimmer {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--border) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme="light"] .card-hover:hover {
+  border-color: var(--border-hover) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}

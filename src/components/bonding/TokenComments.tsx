@@ -14,11 +14,14 @@ import { useAppState } from "@/app/store";
 import { shortenAddress } from "@/lib/utils";
 import { timeAgo } from "@/lib/time";
 
+const REACTIONS = ["🔥", "🚀", "💎", "🐻", "😂"];
+
 interface Comment {
   id: string;
   author: string;
   content: string;
   timestamp: number;
+  reactions?: Record<string, string[]>; // emoji -> array of addresses
 }
 
 interface TokenCommentsProps {
@@ -95,6 +98,32 @@ export function TokenComments({ tokenAddress }: TokenCommentsProps) {
     setDraft("");
     setPosting(false);
   }, [account, draft, posting, comments, tokenAddress]);
+
+  const handleReaction = useCallback(
+    (commentId: string, emoji: string) => {
+      if (!account) return;
+      const updated = comments.map((c) => {
+        if (c.id !== commentId) return c;
+        const reactions = c.reactions ? { ...c.reactions } : {};
+        const users = reactions[emoji] ? [...reactions[emoji]] : [];
+        const idx = users.indexOf(account);
+        if (idx >= 0) {
+          users.splice(idx, 1);
+        } else {
+          users.push(account);
+        }
+        if (users.length === 0) {
+          delete reactions[emoji];
+        } else {
+          reactions[emoji] = users;
+        }
+        return { ...c, reactions };
+      });
+      setComments(updated);
+      saveComments(tokenAddress, updated);
+    },
+    [account, comments, tokenAddress]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -234,6 +263,39 @@ export function TokenComments({ tokenAddress }: TokenCommentsProps) {
               >
                 {c.content}
               </Text>
+              {/* Reactions */}
+              <Flex pl="28px" mt={1.5} gap={1} flexWrap="wrap" align="center">
+                {REACTIONS.map((emoji) => {
+                  const users = c.reactions?.[emoji] || [];
+                  const count = users.length;
+                  const reacted = account ? users.includes(account) : false;
+                  if (count === 0 && !account) return null;
+                  return (
+                    <Box
+                      key={emoji}
+                      as="button"
+                      fontSize="11px"
+                      px={1.5}
+                      py={0.5}
+                      rounded="md"
+                      bg={reacted ? "var(--accent-glow)" : "var(--bg-elevated)"}
+                      border="1px solid"
+                      borderColor={reacted ? "var(--accent)" : "transparent"}
+                      cursor={account ? "pointer" : "default"}
+                      _hover={account ? { borderColor: "var(--border-hover)" } : {}}
+                      transition="all 0.15s"
+                      onClick={() => handleReaction(c.id, emoji)}
+                      opacity={count > 0 ? 1 : 0.4}
+                    >
+                      {emoji}{count > 0 && (
+                        <Box as="span" ml={0.5} fontSize="10px" color="var(--text-secondary)">
+                          {count}
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Flex>
             </Box>
           ))}
         </VStack>
